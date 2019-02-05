@@ -103,19 +103,58 @@ module Pi {ℓ} (A : ∀ i → Set ℓ) (B : ∀ i → A i → Set ℓ)
   where
 
   private
-    module _ (j : I) (aj : A j) where
+    module PiHelp (j : I) (aj : A j) where
       a : (i : I) → A i
       a i = ouc (wfill A {φ = i0} (λ _ ()) j (inc aj) i)
 
       acap : a j ≡ aj
       acap = ouc (wcap A {φ = i0} (λ _ ()) j (inc aj))
 
-      fillB0 : B j (a j) [ φ ↦ (λ v → u j v (a j)) ]
-      fillB0 = wfill (λ i → B i (a i)) (λ i v → u i v (a i)) i (inc (ouc ui (a i))) j
+      fillB : B j (a j) [ φ ↦ (λ v → u j v (a j)) ]
+      fillB = wfill (λ i → B i (a i)) (λ i v → u i v (a i)) i (inc (ouc ui (a i))) j
 
-      fillB1 : B j aj [ φ ↦ (λ v → u j v aj) ]
-      fillB1 = wfill (λ k → B j (acap k)) (λ k → λ {(φ = i1) → u j 1=1 (acap k)}) i0 fillB0 i1
+      fixfill : ∀ k → B j (acap k) [ φ ↦ (λ v → u j v (acap k)) ] → B j aj [ φ ↦ (λ v → u j v aj) ]
+      fixfill k b = wfill (λ k → B j (acap k)) (λ k → λ {(φ = i1) → u j 1=1 (acap k)}) k b i1
+
+      fix = fixfill i0
 
   pi-wfill : (j : I) → ((a : A j) → B j a) [ φ ↦ u j ]
-  pi-wfill j = inc (λ aj → ouc (fillB1 j aj))
+  pi-wfill j = inc (λ aj → let open PiHelp j aj in ouc (fix fillB))
 
+  private
+    module _ (ai : A i) where
+      open PiHelp i ai
+
+      capB : (ouc fillB ≡ ouc ui (a i)) [ φ ↦ (λ {(φ = i1) → refl}) ]
+      capB = wcap (λ i → B i (a i)) (λ i v → u i v (a i)) i (inc (ouc ui (a i)))
+
+      fixcap : (b : B i ai [ φ ↦ (λ v → u i v ai) ])
+        → (ouc (fixfill i1 b) ≡ ouc b) [ φ ↦ (λ {(φ = i1) → refl}) ]
+      fixcap b = wcap (λ k → B i (acap k)) (λ k → λ {(φ = i1) → u i 1=1 (acap k)}) i1 b
+
+      step0 : ouc (fix (inc (ouc ui (a i)))) ≡ ouc ui ai
+      step0 k = ouc
+        (wfill (λ _ → B i ai)
+          (λ m → λ
+            { (k = i0) → ouc (fix (inc (ouc ui (a i))))
+            ; (k = i1) → ouc (fixcap (inc (ouc ui ai))) m
+            ; (φ = i1) → u i 1=1 ai
+            })
+          i0
+          (inc (ouc (fixfill k (inc (ouc ui (acap k))))))
+          i1)
+
+      step1 : ouc (fix fillB) ≡ ouc ui ai
+      step1 k = ouc
+        (wfill (λ _ → B i ai)
+          (λ m → λ
+            { (k = i0) → ouc (fix (inc (ouc capB m)))
+            ; (k = i1) → ouc ui ai
+            ; (φ = i1) → u i 1=1 ai
+            })
+          i1
+          (inc (step0 k))
+          i0)
+
+  pi-wcap : (ouc (pi-wfill i) ≡ ouc ui) [ φ ↦ (λ {(φ = i1) → refl}) ]
+  pi-wcap = inc (λ k ai → step1 ai k)
