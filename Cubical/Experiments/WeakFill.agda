@@ -94,3 +94,29 @@ module Sigma {ℓ} (A : ∀ i → Set ℓ) (B : ∀ i → A i → Set ℓ)
         i0
         (inc (step0 l))
         i1)
+
+module Pi {ℓ} (A : ∀ i → Set ℓ) (B : ∀ i → A i → Set ℓ)
+  {φ : I}
+  (u : ∀ i → Partial φ ((a : A i) → (B i a)))
+  (i : I)
+  (ui : ((a : A i) → B i a) [ φ ↦ u i ])
+  where
+
+  private
+    module _ (j : I) (aj : A j) where
+      a : (i : I) → A i
+      a i = ouc (filli→j A {φ = i0} (λ _ ()) j (inc aj) i)
+
+      acap : a j ≡ aj
+      acap = ouc (filli→i A {φ = i0} (λ _ ()) j (inc aj))
+
+      fillB0 : B j (a j) [ φ ↦ (λ v → u j v (a j)) ]
+      fillB0 = filli→j (λ i → B i (a i)) (λ i v → u i v (a i)) i (inc (ouc ui (a i))) j
+
+      fillB1 : B j aj [ φ ↦ (λ v → u j v aj) ]
+      fillB1 = filli→j (λ k → B j (acap k)) (λ k → λ {(φ = i1) → u j 1=1 (acap k)}) i0 fillB0 i1
+
+  pi-filli→j : (j : I) → ((a : A j) → B j a) [ φ ↦ u j ]
+  pi-filli→j j = inc (λ aj → ouc (fillB1 j aj))
+
+  -- TODO: pi-filli→i
