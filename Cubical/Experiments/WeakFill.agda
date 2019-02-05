@@ -20,6 +20,24 @@ postulate
          ---------------------------
          → (ouc (wfill A u i ui i) ≡ ouc ui) [ φ ↦ (λ {(φ = i1) → refl}) ]
 
+-- homogeneous filling
+module _ {ℓ} (A : Set ℓ) {φ : I} (u : ∀ i → Partial φ A) (i : I) (ui : A [ φ ↦ u i ]) where
+
+  whfill : (j : I) → A [ φ ↦ u j ]
+  whfill = wfill (λ _ → A) u i ui
+
+  whcap : (ouc (whfill i) ≡ ouc ui) [ φ ↦ (λ {(φ = i1) → refl}) ]
+  whcap = wcap (λ _ → A) u i ui
+
+-- coercion
+module _ {ℓ} (A : ∀ i → Set ℓ) (i : I) (ui : A i)  where
+
+  wcfill : (j : I) → A j
+  wcfill j = ouc (wfill A {i0} (λ _ ()) i (inc ui) j)
+
+  wccap : wcfill i ≡ ui
+  wccap = ouc (wcap A {i0} (λ _ ()) i (inc ui))
+
 module Sigma {ℓ} (A : ∀ i → Set ℓ) (B : ∀ i → A i → Set ℓ)
   {φ : I}
   (u : ∀ i → Partial φ (Σ[ a ∈ A i ] (B i a)))
@@ -74,7 +92,7 @@ module Sigma {ℓ} (A : ∀ i → Set ℓ) (B : ∀ i → A i → Set ℓ)
     step0 step1 : ∀ l → B i (ouc capA l)
 
     step0 l = ouc
-      (wfill (λ _ → B i (ouc capA l))
+      (whfill (B i (ouc capA l))
         (λ m → λ
           { (l = i0) → ouc capB m
           ; (l = i1) → ouc (uiBfill i1)
@@ -85,7 +103,7 @@ module Sigma {ℓ} (A : ∀ i → Set ℓ) (B : ∀ i → A i → Set ℓ)
         i0)
 
     step1 l = ouc
-      (wfill (λ _ → B i (ouc capA l))
+      (whfill (B i (ouc capA l))
         (λ m → λ
           { (l = i0) → ouc capB i0
           ; (l = i1) → ouc uiBcap m
@@ -105,10 +123,10 @@ module Pi {ℓ} (A : ∀ i → Set ℓ) (B : ∀ i → A i → Set ℓ)
   private
     module PiHelp (j : I) (aj : A j) where
       a : (i : I) → A i
-      a i = ouc (wfill A {φ = i0} (λ _ ()) j (inc aj) i)
+      a i = wcfill A j aj i
 
       acap : a j ≡ aj
-      acap = ouc (wcap A {φ = i0} (λ _ ()) j (inc aj))
+      acap = wccap A j aj
 
       fillB : B j (a j) [ φ ↦ (λ v → u j v (a j)) ]
       fillB = wfill (λ i → B i (a i)) (λ i v → u i v (a i)) i (inc (ouc ui (a i))) j
@@ -134,7 +152,7 @@ module Pi {ℓ} (A : ∀ i → Set ℓ) (B : ∀ i → A i → Set ℓ)
 
       step0 : ouc (fix (inc (ouc ui (a i)))) ≡ ouc ui ai
       step0 k = ouc
-        (wfill (λ _ → B i ai)
+        (whfill (B i ai)
           (λ m → λ
             { (k = i0) → ouc (fix (inc (ouc ui (a i))))
             ; (k = i1) → ouc (fixcap (inc (ouc ui ai))) m
@@ -146,7 +164,7 @@ module Pi {ℓ} (A : ∀ i → Set ℓ) (B : ∀ i → A i → Set ℓ)
 
       step1 : ouc (fix fillB) ≡ ouc ui ai
       step1 k = ouc
-        (wfill (λ _ → B i ai)
+        (whfill (B i ai)
           (λ m → λ
             { (k = i0) → ouc (fix (inc (ouc capB m)))
             ; (k = i1) → ouc ui ai
@@ -182,3 +200,51 @@ module Path {ℓ} (A : ∀ i → I → Set ℓ) (a0 : ∀ i → A i i0) (a1 : �
       i
       (inc (ouc ui t)))
     k)
+
+-- fill from homogeneous fill and coercion, necessary for higher inductive types
+module Recompose {ℓ} (A : ∀ i → Set ℓ)
+  {φ : I}
+  (u : ∀ i → Partial φ (A i))
+  (i : I)
+  (ui : A i [ φ ↦ u i ])
+  where
+
+  private
+    step0 : (j : I) → A j [ φ ↦ (λ {(φ = i1) → wcfill A j (u j 1=1) j}) ]
+    step0 j =
+      whfill (A j) (λ k v → wcfill A k (u k v) j) i (inc (wcfill A i (ouc ui) j)) j
+
+  wfill' : (j : I) → A j [ φ ↦ u j ]
+  wfill' j =
+    whfill (A j) (λ k → λ {(φ = i1) → wccap A j (u j 1=1) k}) i0 (step0 j) i1
+
+  private
+    step0-cap : (ouc (step0 i) ≡ wcfill A i (ouc ui) i) [ φ ↦ (λ {(φ = i1) → refl}) ]
+    step0-cap =
+      whcap (A i) (λ k v → wcfill A k (u k v) i) i (inc (wcfill A i (ouc ui) i))
+
+    step1 : (k : I) → A i
+    step1 k = ouc
+      (whfill (A i)
+        (λ m → λ
+          { (k = i0) → ouc (wfill' i)
+          ; (k = i1) →
+            ouc (whfill (A i) (λ k v → wccap A i (u i v) k) m (inc (wccap A i (ouc ui) m)) i1)
+          ; (φ = i1) → u i 1=1
+          })
+        i0
+        (inc (ouc (whfill (A i) (λ k v → wccap A i (u i v) k) i0 (inc (ouc step0-cap k)) i1)))
+        i1)
+
+  wcap' : (ouc (wfill' i) ≡ ouc ui) [ φ ↦ (λ {(φ = i1) → refl}) ]
+  wcap' = inc (λ k → ouc
+    (whfill (A i)
+      (λ m → λ
+        { (k = i0) → ouc (wfill' i)
+        ; (k = i1) → ouc (whcap (A i) (λ k v → wccap A i (u i v) k) i1 ui) m
+        ; (φ = i1) → u i 1=1
+        })
+      i0
+      (inc (step1 k))
+      i1))
+
