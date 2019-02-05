@@ -158,3 +158,27 @@ module Pi {ℓ} (A : ∀ i → Set ℓ) (B : ∀ i → A i → Set ℓ)
 
   pi-wcap : (ouc (pi-wfill i) ≡ ouc ui) [ φ ↦ (λ {(φ = i1) → refl}) ]
   pi-wcap = inc (λ k ai → step1 ai k)
+
+module Path {ℓ} (A : ∀ i → I → Set ℓ) (a0 : ∀ i → A i i0) (a1 : ∀ i → A i i1)
+  {φ : I}
+  (u : ∀ i → Partial φ (PathP (A i) (a0 i) (a1 i)))
+  (i : I)
+  (ui : (PathP (A i) (a0 i) (a1 i)) [ φ ↦ u i ])
+  where
+
+  path-wfill : (j : I) → (PathP (A j) (a0 j) (a1 j)) [ φ ↦ u j ]
+  path-wfill j = inc (λ t → ouc
+    (wfill (λ i → A i t)
+      (λ k → λ {(φ = i1) → u k 1=1 t; (t = i0) → a0 k; (t = i1) → a1 k})
+      i
+      (inc (ouc ui t))
+      j)
+    )
+
+  path-wcap : (ouc (path-wfill i) ≡ ouc ui) [ φ ↦ (λ {(φ = i1) → refl}) ]
+  path-wcap = inc (λ k t → ouc
+    (wcap (λ i → A i t)
+      (λ k → λ {(φ = i1) → u k 1=1 t; (t = i0) → a0 k; (t = i1) → a1 k})
+      i
+      (inc (ouc ui t)))
+    k)
