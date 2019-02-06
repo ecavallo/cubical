@@ -2,6 +2,7 @@
 module Cubical.Experiments.WeakFill where
 
 open import Cubical.Core.Everything
+open import Agda.Builtin.Cubical.Glue renaming (primFaceForall to ∀I)
 
 postulate
   wfill : ∀ {ℓ} (A : ∀ i → Set ℓ)
@@ -74,7 +75,7 @@ module Sigma {ℓ} (A : ∀ i → Set ℓ) (B : ∀ i → A i → Set ℓ)
     uiB0 = uiBfill i0
 
     fillB : (j : I) → B j (ouc (fillA j)) [ φ ↦ uB j ]
-    fillB = wfill (λ k → B k (ouc (fillA k))) uB i uiB0 
+    fillB = wfill (λ k → B k (ouc (fillA k))) uB i uiB0
 
   sigma-wfill : (j : I) → (Σ[ a ∈ A j ] (B j a)) [ φ ↦ u j ]
   sigma-wfill j = inc (ouc (fillA j), ouc (fillB j))
@@ -201,6 +202,89 @@ module Path {ℓ} (A : ∀ i → I → Set ℓ) (a0 : ∀ i → A i i0) (a1 : �
       (inc (ouc ui t)))
     k)
 
+-- This covers the case where the cofibration of the Glue type does not vary in the direction of composition.
+-- We cannot formalize the general case because of the limitations of cubical Agda, but I have tried to write
+-- the code in a way that easily generalizes (using ∀I where it would be necessary in the general case).
+module SomeGlue {ℓ} (A : I → Set ℓ) (φ : I)
+  (P : (i : I) → Partial φ (Σ[ T ∈ Set ℓ ] (T ≃ A i)))
+  {ψ : I}
+  (u : ∀ i → Partial ψ (Glue (A i) (P i)))
+  (i : I)
+  (ui : (Glue (A i) (P i)) [ ψ ↦ u i ])
+  where
+
+  private
+    T : (i : I) → Partial φ (Set ℓ)
+    T i v = fst (P i v)
+
+    e : (i : I) → PartialP φ (λ v → T i v ≃ A i)
+    e i v = snd (P i v)
+
+    a : ∀ i → Partial ψ (A i)
+    a i v = unglue φ (u i v)
+
+    a₀ : A i [ ψ ↦ a i ]
+    a₀ = inc (unglue φ (ouc ui))
+
+    b̃-fix : I → PartialP (∀I (λ _ → φ)) (λ v → T i v)
+    b̃-fix k = λ {(∀I (λ _ → φ) = i1) → ouc (wcap (λ j → T j 1=1) u i ui) k}
+
+    b̃ : ∀ j → PartialP (∀I (λ _ → φ)) (λ v → T j v)
+    b̃ j = λ {(∀I (λ _ → φ) = i1) → ouc (wfill (λ j → T j 1=1) u i ui j)}
+
+    a₀-fix : I → A i
+    a₀-fix k = ouc
+      (whfill (A i) {ψ ∨ ∀I (λ _ → φ)}
+        (λ k → λ
+          { (ψ = i1) → a i 1=1
+          ; (∀I (λ _ → φ) = i1) → e i 1=1 .fst (b̃-fix k 1=1)
+          })
+          i1
+          (inc (ouc a₀))
+          k)
+
+    a₁ : ∀ j → A j
+    a₁ j = ouc
+      (wfill A {ψ ∨ ∀I (λ i → φ)}
+        (λ j → λ
+          { (ψ = i1) → a j 1=1
+          ; (∀I (λ _ → φ) = i1) → e j 1=1 .fst (b̃ j 1=1)
+          })
+        i
+        (inc (a₀-fix i0))
+        j)
+
+  C₁ : ∀ j → PartialP φ (λ v → fiber (e j v .fst) (a₁ j))
+  C₁ j = λ {(φ = i1) → e j 1=1 .snd .equiv-proof (a₁ j) .fst}
+
+  C₂ : ∀ j → PartialP φ (λ v → (f : fiber (e j v .fst) (a₁ j)) → C₁ j v ≡ f)
+  C₂ j = λ {(φ = i1) → e j 1=1 .snd .equiv-proof (a₁ j) .snd}
+
+  R : ∀ j → PartialP φ (λ v → fiber (e j v .fst) (a₁ j))
+  R j = λ {(φ = i1) → ouc
+    (whfill (fiber (e j 1=1 .fst) (a₁ j))
+      (λ k → λ
+        { (ψ = i1) → C₂ j 1=1 (u j 1=1 , λ _ → a₁ j) k
+        ; (∀I (λ _ → φ) = i1) → C₂ j 1=1 (b̃ j 1=1 , λ _ → a₁ j) k
+        })
+      i0
+      (inc (C₁ j 1=1))
+      i1)}
+
+  a₁' : ∀ j → A j
+  a₁' j = ouc
+    (whfill (A j)
+      (λ k → λ
+        { (ψ = i1) → a j 1=1
+        ; (φ = i1) → R j 1=1 .snd k
+        })
+      i1
+      (inc (a₁ j))
+      i0)
+
+  glue-wfill : (j : I) → (Glue (A j) (P j)) [ ψ ↦ u j ]
+  glue-wfill j = inc (glue (λ v → R j v .fst) (a₁' j))
+
 -- fill from homogeneous fill and coercion, necessary for higher inductive types
 module Recompose {ℓ} (A : ∀ i → Set ℓ)
   {φ : I}
@@ -247,4 +331,3 @@ module Recompose {ℓ} (A : ∀ i → Set ℓ)
       i0
       (inc (step1 k))
       i1))
-
