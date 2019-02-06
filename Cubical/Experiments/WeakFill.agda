@@ -4,40 +4,84 @@ module Cubical.Experiments.WeakFill where
 open import Cubical.Core.Everything
 open import Agda.Builtin.Cubical.Glue renaming (primFaceForall to ∀I)
 
-postulate
-  wfill : ∀ {ℓ} (A : ∀ i → Set ℓ)
-         {φ : I}
-         (u : ∀ i → Partial φ (A i))
-         (i : I)
-         (ui : A i [ φ ↦ u i ])
-         ---------------------------
-         (j : I) → A j [ φ ↦ u j ]
+-- postulate weak com
+module _ {ℓ} (A : ∀ i → Set ℓ) {φ : I} (u : ∀ i → Partial φ (A i)) (i : I) (ui : A i [ φ ↦ u i ]) where
+  postulate
+    wcom : (j : I) → A j [ φ ↦ u j ]
+    wcap : (ouc (wcom i) ≡ ouc ui) [ φ ↦ (λ {(φ = i1) → refl}) ]
 
-  wcap : ∀ {ℓ} (A : ∀ i → Set ℓ)
-         {φ : I}
-         (u : ∀ i → Partial φ (A i))
-         (i : I)
-         (ui : A i [ φ ↦ u i ])
-         ---------------------------
-         → (ouc (wfill A u i ui i) ≡ ouc ui) [ φ ↦ (λ {(φ = i1) → refl}) ]
-
--- homogeneous filling
+-- derive homogeneous com
 module _ {ℓ} (A : Set ℓ) {φ : I} (u : ∀ i → Partial φ A) (i : I) (ui : A [ φ ↦ u i ]) where
 
-  whfill : (j : I) → A [ φ ↦ u j ]
-  whfill = wfill (λ _ → A) u i ui
+  whcom : (j : I) → A [ φ ↦ u j ]
+  whcom = wcom (λ _ → A) u i ui
 
-  whcap : (ouc (whfill i) ≡ ouc ui) [ φ ↦ (λ {(φ = i1) → refl}) ]
+  whcap : (ouc (whcom i) ≡ ouc ui) [ φ ↦ (λ {(φ = i1) → refl}) ]
   whcap = wcap (λ _ → A) u i ui
 
--- coercion
+-- derive coercion
 module _ {ℓ} (A : ∀ i → Set ℓ) (i : I) (ui : A i)  where
 
-  wcfill : (j : I) → A j
-  wcfill j = ouc (wfill A {i0} (λ _ ()) i (inc ui) j)
+  wccom : (j : I) → A j
+  wccom j = ouc (wcom A {i0} (λ _ ()) i (inc ui) j)
 
-  wccap : wcfill i ≡ ui
+  wccap : wccom i ≡ ui
   wccap = ouc (wcap A {i0} (λ _ ()) i (inc ui))
+
+-- derive strict com to and from 0 or 1
+-- The general principle is that strict com r->s is derivable when r = s is a cofibration.
+
+module _ {ℓ} (A : ∀ i → Set ℓ) {φ : I} (u : ∀ i → Partial φ (A i)) (u0 : A i0 [ φ ↦ u i0 ]) where
+
+  scom0→ : (j : I) → A j [ φ ↦ u j ]
+  scom0→ j =
+    inc (ouc (whcom (A j) {φ ∨ ~ j}
+      (λ k → λ
+        { (φ = i1) → u j 1=1
+        ; (j = i0) → ouc (wcap A u i0 u0) k
+        })
+      i0
+      (inc (ouc (wcom A u i0 u0 j)))
+      i1))
+
+module _ {ℓ} (A : ∀ i → Set ℓ) {φ : I} (u : ∀ i → Partial φ (A i)) (u1 : A i1 [ φ ↦ u i1 ]) where
+
+  scom1→ : (j : I) → A j [ φ ↦ u j ]
+  scom1→ j =
+    inc (ouc (whcom (A j) {φ ∨ j}
+      (λ k → λ
+        { (φ = i1) → u j 1=1
+        ; (j = i1) → ouc (wcap A u i1 u1) k
+        })
+      i0
+      (inc (ouc (wcom A u i1 u1 j)))
+      i1))
+
+module _ {ℓ} (A : ∀ i → Set ℓ) {φ : I} (u : ∀ i → Partial φ (A i)) (i : I) (ui : A i [ φ ↦ u i ]) where
+
+  scom→0 : A i0 [ φ ↦ u i0 ]
+  scom→0 =
+    inc (ouc (whcom (A i0) {φ ∨ ~ i}
+      (λ k → λ
+        { (φ = i1) → u i0 1=1
+        ; (i = i0) → ouc (wcap A u i ui) k
+        })
+      i0
+      (inc (ouc (wcom A u i ui i0)))
+      i1))
+
+  scom→1 : A i1 [ φ ↦ u i1 ]
+  scom→1 =
+    inc (ouc (whcom (A i1) {φ ∨ i}
+      (λ k → λ
+        { (φ = i1) → u i1 1=1
+        ; (i = i1) → ouc (wcap A u i ui) k
+        })
+      i0
+      (inc (ouc (wcom A u i ui i1)))
+      i1))
+
+-- demonstrate that type formers support wcom+wcap structures
 
 module Sigma {ℓ} (A : ∀ i → Set ℓ) (B : ∀ i → A i → Set ℓ)
   {φ : I}
@@ -54,65 +98,47 @@ module Sigma {ℓ} (A : ∀ i → Set ℓ) (B : ∀ i → A i → Set ℓ)
     uiA : A i [ φ ↦ uA i ]
     uiA = inc (fst (ouc ui))
 
-    fillA : (j : I) → A j [ φ ↦ uA j ]
-    fillA = wfill A uA i uiA
+    comA : (j : I) → A j [ φ ↦ uA j ]
+    comA = wcom A uA i uiA
 
-    capA : (ouc (fillA i) ≡ ouc uiA) [ φ ↦ (λ {(φ = i1) → refl}) ]
+    capA : (ouc (comA i) ≡ ouc uiA) [ φ ↦ (λ {(φ = i1) → refl}) ]
     capA = wcap A uA i uiA
 
     -- second component
-    uB : ∀ i → Partial φ (B i (ouc (fillA i)))
+    uB : ∀ i → Partial φ (B i (ouc (comA i)))
     uB i = λ {(φ = i1) → snd (u i 1=1)}
 
     uiB1 : B i (ouc uiA) [ φ ↦ (λ {(φ = i1) → uB i 1=1}) ]
     uiB1 = inc (snd (ouc ui))
 
     -- need to adjust type of uiB1 by capA
-    uiBfill : ∀ k → B i (ouc capA k) [ φ ↦ (λ {(φ = i1) → uB i 1=1}) ]
-    uiBfill k = wfill (λ k → B i (ouc capA k)) (λ _ → λ {(φ = i1) → uB i 1=1}) i1 uiB1 k
+    uiB : ∀ k → B i (ouc capA k) [ φ ↦ (λ {(φ = i1) → uB i 1=1}) ]
+    uiB k = scom1→ (λ k → B i (ouc capA k)) (λ _ → λ {(φ = i1) → uB i 1=1}) uiB1 k
 
-    uiB0 : B i (ouc (fillA i)) [ φ ↦ uB i ]
-    uiB0 = uiBfill i0
+    comB : (j : I) → B j (ouc (comA j)) [ φ ↦ uB j ]
+    comB = wcom (λ k → B k (ouc (comA k))) uB i (uiB i0)
 
-    fillB : (j : I) → B j (ouc (fillA j)) [ φ ↦ uB j ]
-    fillB = wfill (λ k → B k (ouc (fillA k))) uB i uiB0
-
-  sigma-wfill : (j : I) → (Σ[ a ∈ A j ] (B j a)) [ φ ↦ u j ]
-  sigma-wfill j = inc (ouc (fillA j), ouc (fillB j))
+  sigma-wcom : (j : I) → (Σ[ a ∈ A j ] (B j a)) [ φ ↦ u j ]
+  sigma-wcom j = inc (ouc (comA j), ouc (comB j))
 
   private
-    uiBcap : (ouc (uiBfill i1) ≡ ouc uiB1) [ φ ↦ (λ {(φ = i1) → refl}) ]
-    uiBcap = wcap (λ k → B i (ouc capA k)) (λ _ → λ {(φ = i1) → uB i 1=1}) i1 uiB1
+    capB0 : (ouc (comB i) ≡ ouc (uiB i0)) [ φ ↦ (λ {(φ = i1) → refl}) ]
+    capB0 = wcap (λ j → B j (ouc (comA j))) uB i (uiB i0)
 
-    capB : (ouc (fillB i) ≡ ouc uiB0) [ φ ↦ (λ {(φ = i1) → refl}) ]
-    capB = wcap (λ j → B j (ouc (fillA j))) uB i uiB0
-
-  sigma-wcap : (ouc (sigma-wfill i) ≡ ouc ui) [ φ ↦ (λ {(φ = i1) → refl}) ]
-  sigma-wcap = inc (λ l → ouc capA l , step1 l)
-    where
-    step0 step1 : ∀ l → B i (ouc capA l)
-
-    step0 l = ouc
-      (whfill (B i (ouc capA l))
+    capB1 : ∀ l → B i (ouc capA l)
+    capB1 l = ouc
+      (whcom (B i (ouc capA l))
         (λ m → λ
-          { (l = i0) → ouc capB m
-          ; (l = i1) → ouc (uiBfill i1)
+          { (l = i0) → ouc capB0 m
+          ; (l = i1) → ouc uiB1
           ; (φ = i1) → uB i 1=1
           })
         i1
-        (inc (ouc (uiBfill l)))
+        (inc (ouc (uiB l)))
         i0)
 
-    step1 l = ouc
-      (whfill (B i (ouc capA l))
-        (λ m → λ
-          { (l = i0) → ouc capB i0
-          ; (l = i1) → ouc uiBcap m
-          ; (φ = i1) → uB i 1=1
-          })
-        i0
-        (inc (step0 l))
-        i1)
+  sigma-wcap : (ouc (sigma-wcom i) ≡ ouc ui) [ φ ↦ (λ {(φ = i1) → refl}) ]
+  sigma-wcap = inc (λ l → ouc capA l , capB1 l)
 
 module Pi {ℓ} (A : ∀ i → Set ℓ) (B : ∀ i → A i → Set ℓ)
   {φ : I}
@@ -124,59 +150,43 @@ module Pi {ℓ} (A : ∀ i → Set ℓ) (B : ∀ i → A i → Set ℓ)
   private
     module PiHelp (j : I) (aj : A j) where
       a : (i : I) → A i
-      a i = wcfill A j aj i
+      a i = wccom A j aj i
 
       acap : a j ≡ aj
       acap = wccap A j aj
 
-      fillB : B j (a j) [ φ ↦ (λ v → u j v (a j)) ]
-      fillB = wfill (λ i → B i (a i)) (λ i v → u i v (a i)) i (inc (ouc ui (a i))) j
+      comB : B j (a j) [ φ ↦ (λ v → u j v (a j)) ]
+      comB = wcom (λ i → B i (a i)) (λ i v → u i v (a i)) i (inc (ouc ui (a i))) j
 
-      fixfill : ∀ k → B j (acap k) [ φ ↦ (λ v → u j v (acap k)) ] → B j aj [ φ ↦ (λ v → u j v aj) ]
-      fixfill k b = wfill (λ k → B j (acap k)) (λ k → λ {(φ = i1) → u j 1=1 (acap k)}) k b i1
+      fixcom : ∀ k → B j (acap k) [ φ ↦ (λ v → u j v (acap k)) ] → B j aj [ φ ↦ (λ v → u j v aj) ]
+      fixcom k b = scom→1 (λ k → B j (acap k)) (λ k → λ {(φ = i1) → u j 1=1 (acap k)}) k b
 
-      fix = fixfill i0
+      fix = fixcom i0
 
-  pi-wfill : (j : I) → ((a : A j) → B j a) [ φ ↦ u j ]
-  pi-wfill j = inc (λ aj → let open PiHelp j aj in ouc (fix fillB))
+  pi-wcom : (j : I) → ((a : A j) → B j a) [ φ ↦ u j ]
+  pi-wcom j = inc (λ aj → let open PiHelp j aj in ouc (fix comB))
 
   private
     module _ (ai : A i) where
       open PiHelp i ai
 
-      capB : (ouc fillB ≡ ouc ui (a i)) [ φ ↦ (λ {(φ = i1) → refl}) ]
+      capB : (ouc comB ≡ ouc ui (a i)) [ φ ↦ (λ {(φ = i1) → refl}) ]
       capB = wcap (λ i → B i (a i)) (λ i v → u i v (a i)) i (inc (ouc ui (a i)))
 
-      fixcap : (b : B i ai [ φ ↦ (λ v → u i v ai) ])
-        → (ouc (fixfill i1 b) ≡ ouc b) [ φ ↦ (λ {(φ = i1) → refl}) ]
-      fixcap b = wcap (λ k → B i (acap k)) (λ k → λ {(φ = i1) → u i 1=1 (acap k)}) i1 b
-
-      step0 : ouc (fix (inc (ouc ui (a i)))) ≡ ouc ui ai
-      step0 k = ouc
-        (whfill (B i ai)
-          (λ m → λ
-            { (k = i0) → ouc (fix (inc (ouc ui (a i))))
-            ; (k = i1) → ouc (fixcap (inc (ouc ui ai))) m
-            ; (φ = i1) → u i 1=1 ai
-            })
-          i0
-          (inc (ouc (fixfill k (inc (ouc ui (acap k))))))
-          i1)
-
-      step1 : ouc (fix fillB) ≡ ouc ui ai
-      step1 k = ouc
-        (whfill (B i ai)
+      capB-fix : ouc (fix comB) ≡ ouc ui ai
+      capB-fix k = ouc
+        (whcom (B i ai)
           (λ m → λ
             { (k = i0) → ouc (fix (inc (ouc capB m)))
             ; (k = i1) → ouc ui ai
             ; (φ = i1) → u i 1=1 ai
             })
           i1
-          (inc (step0 k))
+          (inc (ouc (fixcom k (inc (ouc ui (acap k))))))
           i0)
 
-  pi-wcap : (ouc (pi-wfill i) ≡ ouc ui) [ φ ↦ (λ {(φ = i1) → refl}) ]
-  pi-wcap = inc (λ k ai → step1 ai k)
+  pi-wcap : (ouc (pi-wcom i) ≡ ouc ui) [ φ ↦ (λ {(φ = i1) → refl}) ]
+  pi-wcap = inc (λ k ai → capB-fix ai k)
 
 module Path {ℓ} (A : ∀ i → I → Set ℓ) (a0 : ∀ i → A i i0) (a1 : ∀ i → A i i1)
   {φ : I}
@@ -185,16 +195,16 @@ module Path {ℓ} (A : ∀ i → I → Set ℓ) (a0 : ∀ i → A i i0) (a1 : �
   (ui : (PathP (A i) (a0 i) (a1 i)) [ φ ↦ u i ])
   where
 
-  path-wfill : (j : I) → (PathP (A j) (a0 j) (a1 j)) [ φ ↦ u j ]
-  path-wfill j = inc (λ t → ouc
-    (wfill (λ i → A i t)
+  path-wcom : (j : I) → (PathP (A j) (a0 j) (a1 j)) [ φ ↦ u j ]
+  path-wcom j = inc (λ t → ouc
+    (wcom (λ i → A i t)
       (λ k → λ {(φ = i1) → u k 1=1 t; (t = i0) → a0 k; (t = i1) → a1 k})
       i
       (inc (ouc ui t))
       j)
     )
 
-  path-wcap : (ouc (path-wfill i) ≡ ouc ui) [ φ ↦ (λ {(φ = i1) → refl}) ]
+  path-wcap : (ouc (path-wcom i) ≡ ouc ui) [ φ ↦ (λ {(φ = i1) → refl}) ]
   path-wcap = inc (λ k t → ouc
     (wcap (λ i → A i t)
       (λ k → λ {(φ = i1) → u k 1=1 t; (t = i0) → a0 k; (t = i1) → a1 k})
@@ -226,26 +236,25 @@ module SomeGlue {ℓ} (A : I → Set ℓ) (φ : I)
     a₀ : A i [ ψ ↦ a i ]
     a₀ = inc (unglue φ (ouc ui))
 
-    b̃-fix : I → PartialP (∀I (λ _ → φ)) (λ v → T i v)
-    b̃-fix k = λ {(∀I (λ _ → φ) = i1) → ouc (wcap (λ j → T j 1=1) u i ui) k}
-
     b̃ : ∀ j → PartialP (∀I (λ _ → φ)) (λ v → T j v)
-    b̃ j = λ {(∀I (λ _ → φ) = i1) → ouc (wfill (λ j → T j 1=1) u i ui j)}
+    b̃ j = λ {(∀I (λ _ → φ) = i1) → ouc (wcom (λ j → T j 1=1) u i ui j)}
+
+    b̃-cap : PartialP {ℓ} (∀I (λ _ → φ)) (λ {(∀I (λ _ → φ) = i1) → b̃ i 1=1 ≡ ouc ui})
+    b̃-cap = λ {(∀I (λ _ → φ) = i1) → ouc (wcap (λ j → T j 1=1) u i ui)}
 
     a₀-fix : I → A i
     a₀-fix k = ouc
-      (whfill (A i) {ψ ∨ ∀I (λ _ → φ)}
+      (scom1→ (λ _ → A i) {ψ ∨ ∀I (λ _ → φ)}
         (λ k → λ
           { (ψ = i1) → a i 1=1
-          ; (∀I (λ _ → φ) = i1) → e i 1=1 .fst (b̃-fix k 1=1)
+          ; (∀I (λ _ → φ) = i1) → e i 1=1 .fst (b̃-cap 1=1 k)
           })
-          i1
           (inc (ouc a₀))
           k)
 
     a₁ : ∀ j → A j
     a₁ j = ouc
-      (wfill A {ψ ∨ ∀I (λ i → φ)}
+      (wcom A {ψ ∨ ∀I (λ i → φ)}
         (λ j → λ
           { (ψ = i1) → a j 1=1
           ; (∀I (λ _ → φ) = i1) → e j 1=1 .fst (b̃ j 1=1)
@@ -254,38 +263,36 @@ module SomeGlue {ℓ} (A : I → Set ℓ) (φ : I)
         (inc (a₀-fix i0))
         j)
 
-  C₁ : ∀ j → PartialP φ (λ v → fiber (e j v .fst) (a₁ j))
-  C₁ j = λ {(φ = i1) → e j 1=1 .snd .equiv-proof (a₁ j) .fst}
+    C₁ : ∀ j → PartialP φ (λ v → fiber (e j v .fst) (a₁ j))
+    C₁ j = λ {(φ = i1) → e j 1=1 .snd .equiv-proof (a₁ j) .fst}
 
-  C₂ : ∀ j → PartialP φ (λ v → (f : fiber (e j v .fst) (a₁ j)) → C₁ j v ≡ f)
-  C₂ j = λ {(φ = i1) → e j 1=1 .snd .equiv-proof (a₁ j) .snd}
+    C₂ : ∀ j → PartialP φ (λ v → (f : fiber (e j v .fst) (a₁ j)) → C₁ j v ≡ f)
+    C₂ j = λ {(φ = i1) → e j 1=1 .snd .equiv-proof (a₁ j) .snd}
 
-  R : ∀ j → PartialP φ (λ v → fiber (e j v .fst) (a₁ j))
-  R j = λ {(φ = i1) → ouc
-    (whfill (fiber (e j 1=1 .fst) (a₁ j))
-      (λ k → λ
-        { (ψ = i1) → C₂ j 1=1 (u j 1=1 , λ _ → a₁ j) k
-        ; (∀I (λ _ → φ) = i1) → C₂ j 1=1 (b̃ j 1=1 , λ _ → a₁ j) k
-        })
-      i0
-      (inc (C₁ j 1=1))
-      i1)}
+    R : ∀ j → PartialP φ (λ v → fiber (e j v .fst) (a₁ j))
+    R j = λ {(φ = i1) → ouc
+      (scom0→ (λ _ → fiber (e j 1=1 .fst) (a₁ j))
+        (λ k → λ
+          { (ψ = i1) → C₂ j 1=1 (u j 1=1 , λ _ → a₁ j) k
+          ; (∀I (λ _ → φ) = i1) → C₂ j 1=1 (b̃ j 1=1 , λ _ → a₁ j) k
+          })
+        (inc (C₁ j 1=1))
+        i1)}
 
-  a₁' : ∀ j → A j
-  a₁' j = ouc
-    (whfill (A j)
-      (λ k → λ
-        { (ψ = i1) → a j 1=1
-        ; (φ = i1) → R j 1=1 .snd k
-        })
-      i1
-      (inc (a₁ j))
-      i0)
+    a₁' : ∀ j → A j
+    a₁' j = ouc
+      (scom1→ (λ _ → A j)
+        (λ k → λ
+          { (ψ = i1) → a j 1=1
+          ; (φ = i1) → R j 1=1 .snd k
+          })
+        (inc (a₁ j))
+        i0)
 
-  glue-wfill : (j : I) → (Glue (A j) (P j)) [ ψ ↦ u j ]
-  glue-wfill j = inc (glue (λ v → R j v .fst) (a₁' j))
+  glue-wcom : (j : I) → (Glue (A j) (P j)) [ ψ ↦ u j ]
+  glue-wcom j = inc (glue (λ v → R j v .fst) (a₁' j))
 
--- fill from homogeneous fill and coercion, necessary for higher inductive types
+-- com from homogeneous com and coercion, necessary for higher inductive types
 module Recompose {ℓ} (A : ∀ i → Set ℓ)
   {φ : I}
   (u : ∀ i → Partial φ (A i))
@@ -294,37 +301,37 @@ module Recompose {ℓ} (A : ∀ i → Set ℓ)
   where
 
   private
-    step0 : (j : I) → A j [ φ ↦ (λ {(φ = i1) → wcfill A j (u j 1=1) j}) ]
+    step0 : (j : I) → A j [ φ ↦ (λ {(φ = i1) → wccom A j (u j 1=1) j}) ]
     step0 j =
-      whfill (A j) (λ k v → wcfill A k (u k v) j) i (inc (wcfill A i (ouc ui) j)) j
+      whcom (A j) (λ k v → wccom A k (u k v) j) i (inc (wccom A i (ouc ui) j)) j
 
-  wfill' : (j : I) → A j [ φ ↦ u j ]
-  wfill' j =
-    whfill (A j) (λ k → λ {(φ = i1) → wccap A j (u j 1=1) k}) i0 (step0 j) i1
+  wcom' : (j : I) → A j [ φ ↦ u j ]
+  wcom' j =
+    whcom (A j) (λ k → λ {(φ = i1) → wccap A j (u j 1=1) k}) i0 (step0 j) i1
 
   private
-    step0-cap : (ouc (step0 i) ≡ wcfill A i (ouc ui) i) [ φ ↦ (λ {(φ = i1) → refl}) ]
+    step0-cap : (ouc (step0 i) ≡ wccom A i (ouc ui) i) [ φ ↦ (λ {(φ = i1) → refl}) ]
     step0-cap =
-      whcap (A i) (λ k v → wcfill A k (u k v) i) i (inc (wcfill A i (ouc ui) i))
+      whcap (A i) (λ k v → wccom A k (u k v) i) i (inc (wccom A i (ouc ui) i))
 
     step1 : (k : I) → A i
     step1 k = ouc
-      (whfill (A i)
+      (whcom (A i)
         (λ m → λ
-          { (k = i0) → ouc (wfill' i)
+          { (k = i0) → ouc (wcom' i)
           ; (k = i1) →
-            ouc (whfill (A i) (λ k v → wccap A i (u i v) k) m (inc (wccap A i (ouc ui) m)) i1)
+            ouc (whcom (A i) (λ k v → wccap A i (u i v) k) m (inc (wccap A i (ouc ui) m)) i1)
           ; (φ = i1) → u i 1=1
           })
         i0
-        (inc (ouc (whfill (A i) (λ k v → wccap A i (u i v) k) i0 (inc (ouc step0-cap k)) i1)))
+        (inc (ouc (whcom (A i) (λ k v → wccap A i (u i v) k) i0 (inc (ouc step0-cap k)) i1)))
         i1)
 
-  wcap' : (ouc (wfill' i) ≡ ouc ui) [ φ ↦ (λ {(φ = i1) → refl}) ]
+  wcap' : (ouc (wcom' i) ≡ ouc ui) [ φ ↦ (λ {(φ = i1) → refl}) ]
   wcap' = inc (λ k → ouc
-    (whfill (A i)
+    (whcom (A i)
       (λ m → λ
-        { (k = i0) → ouc (wfill' i)
+        { (k = i0) → ouc (wcom' i)
         ; (k = i1) → ouc (whcap (A i) (λ k v → wccap A i (u i v) k) i1 ui) m
         ; (φ = i1) → u i 1=1
         })
