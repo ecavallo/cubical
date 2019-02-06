@@ -272,9 +272,9 @@ module SomeGlue {ℓ} (A : I → Set ℓ) (φ : I)
     R : ∀ j → PartialP φ (λ v → fiber (e j v .fst) (a₁ j))
     R j = λ {(φ = i1) → ouc
       (scom0→ (λ _ → fiber (e j 1=1 .fst) (a₁ j))
-        (λ k → λ
-          { (ψ = i1) → C₂ j 1=1 (u j 1=1 , λ _ → a₁ j) k
-          ; (∀I (λ _ → φ) = i1) → C₂ j 1=1 (b̃ j 1=1 , λ _ → a₁ j) k
+        (λ m → λ
+          { (ψ = i1) → C₂ j 1=1 (u j 1=1 , λ _ → a₁ j) m
+          ; (∀I (λ _ → φ) = i1) → C₂ j 1=1 (b̃ j 1=1 , λ _ → a₁ j) m
           })
         (inc (C₁ j 1=1))
         i1)}
@@ -282,15 +282,77 @@ module SomeGlue {ℓ} (A : I → Set ℓ) (φ : I)
     a₁' : ∀ j → A j
     a₁' j = ouc
       (scom1→ (λ _ → A j)
-        (λ k → λ
+        (λ m → λ
           { (ψ = i1) → a j 1=1
-          ; (φ = i1) → R j 1=1 .snd k
+          ; (φ = i1) → R j 1=1 .snd m
           })
         (inc (a₁ j))
         i0)
 
   glue-wcom : (j : I) → (Glue (A j) (P j)) [ ψ ↦ u j ]
   glue-wcom j = inc (glue (λ v → R j v .fst) (a₁' j))
+
+  -- check coherence
+  _ : (j : I) → PartialP {ℓ} φ (λ {(φ = i1) → ouc (glue-wcom j) ≡ ouc (wcom (λ i → T i 1=1) u i ui j)})
+  _ = λ j → λ {(φ = i1) → refl}
+
+  private
+    a₁-step : a₁ i ≡ a₀-fix i0
+    a₁-step = ouc
+      (wcap A {ψ ∨ ∀I (λ i → φ)}
+        (λ j → λ
+          { (ψ = i1) → a j 1=1
+          ; (∀I (λ _ → φ) = i1) → e j 1=1 .fst (b̃ j 1=1)
+          })
+        i
+        (inc (a₀-fix i0)))
+
+    a₁-cap : a₁ i ≡ ouc a₀
+    a₁-cap k = ouc
+      (scom1→ (λ _ → A i)
+        (λ m → λ
+          { (ψ = i1) → a₁ i
+          ; (∀I (λ _ → φ) = i1) → e i 1=1 .fst (b̃-cap 1=1 k)
+          ; (k = i0) → a₁-step m
+          ; (k = i1) → ouc a₀
+          })
+        (inc (a₀-fix k))
+        i0)
+
+    C₁-cap : ∀ k → PartialP φ (λ v → fiber (e i v .fst) (a₁-cap k))
+    C₁-cap k = λ {(φ = i1) → e i 1=1 .snd .equiv-proof (a₁-cap k) .fst}
+
+    C₂-cap : ∀ k → PartialP φ (λ v → (f : fiber (e i v .fst) (a₁-cap k)) → C₁-cap k v ≡ f)
+    C₂-cap k = λ {(φ = i1) → e i 1=1 .snd .equiv-proof (a₁-cap k) .snd}
+
+    R-cap : ∀ k → PartialP {ℓ} φ (λ v → fiber (e i v .fst) (a₁-cap k))
+    R-cap k = λ {(φ = i1) → ouc
+      (scom0→ (λ _ → fiber (e i 1=1 .fst) (a₁-cap k))
+        (λ m → λ
+          { (ψ = i1) → C₂-cap k 1=1 (u i 1=1 , refl) m
+          ; (∀I (λ _ → φ) = i1) → C₂-cap k 1=1 (b̃-cap 1=1 k , refl) m
+          ; (k = i1) → C₂-cap k 1=1 (ouc ui , refl) m
+          })
+        (inc (C₁-cap k 1=1))
+        i1)}
+
+    a₁'-cap : I → A i
+    a₁'-cap k = ouc
+      (scom1→ (λ _ → A i)
+        (λ m → λ
+          { (ψ = i1) → a i 1=1
+          ; (φ = i1) → R-cap k 1=1 .snd m
+          ; (k = i1) → ouc a₀
+          })
+        (inc (a₁-cap k))
+        i0)
+
+  glue-wcap : (ouc (glue-wcom i) ≡ ouc ui) [ ψ ↦ (λ {(ψ = i1) → refl}) ]
+  glue-wcap = inc (λ k → glue (λ v → R-cap k v .fst) (a₁'-cap k))
+
+  -- check coherence
+  _ : PartialP {ℓ} φ (λ {(φ = i1) → ouc glue-wcap ≡ ouc (wcap (λ i → T i 1=1) u i ui)})
+  _ = λ {(φ = i1) → refl}
 
 -- com from homogeneous com and coercion, necessary for higher inductive types
 module Recompose {ℓ} (A : ∀ i → Set ℓ)
