@@ -273,8 +273,8 @@ module SomeGlue {ℓ} (A : I → Set ℓ) (φ : I)
     R j = λ {(φ = i1) → ouc
       (scom0→ (λ _ → fiber (e j 1=1 .fst) (a₁ j))
         (λ m → λ
-          { (ψ = i1) → C₂ j 1=1 (u j 1=1 , λ _ → a₁ j) m
-          ; (∀I (λ _ → φ) = i1) → C₂ j 1=1 (b̃ j 1=1 , λ _ → a₁ j) m
+          { (ψ = i1) → C₂ j 1=1 (u j 1=1 , refl) m
+          ; (∀I (λ _ → φ) = i1) → C₂ j 1=1 (b̃ j 1=1 , refl) m
           })
         (inc (C₁ j 1=1))
         i1)}
