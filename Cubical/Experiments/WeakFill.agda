@@ -246,7 +246,7 @@ module SomeGlue {ℓ} (A : I → Set ℓ) (φ : I)
     a₀-fix k = ouc
       (scom1→ (λ _ → A i) {ψ ∨ ∀I (λ _ → φ)}
         (λ k → λ
-          { (ψ = i1) → a i 1=1
+          { (ψ = i1) → ouc a₀
           ; (∀I (λ _ → φ) = i1) → e i 1=1 .fst (b̃-cap 1=1 k)
           })
           (inc (ouc a₀))
@@ -271,21 +271,23 @@ module SomeGlue {ℓ} (A : I → Set ℓ) (φ : I)
 
     R : ∀ j → PartialP φ (λ v → fiber (e j v .fst) (a₁ j))
     R j = λ {(φ = i1) → ouc
-      (scom0→ (λ _ → fiber (e j 1=1 .fst) (a₁ j))
+      (wcom (λ _ → fiber (e j 1=1 .fst) (a₁ j))
         (λ m → λ
           { (ψ = i1) → C₂ j 1=1 (u j 1=1 , refl) m
           ; (∀I (λ _ → φ) = i1) → C₂ j 1=1 (b̃ j 1=1 , refl) m
           })
+        i0
         (inc (C₁ j 1=1))
         i1)}
 
     a₁' : ∀ j → A j
     a₁' j = ouc
-      (scom1→ (λ _ → A j)
+      (wcom (λ _ → A j)
         (λ m → λ
           { (ψ = i1) → a j 1=1
           ; (φ = i1) → R j 1=1 .snd m
           })
+        i1
         (inc (a₁ j))
         i0)
 
@@ -309,13 +311,14 @@ module SomeGlue {ℓ} (A : I → Set ℓ) (φ : I)
 
     a₁-cap : a₁ i ≡ ouc a₀
     a₁-cap k = ouc
-      (scom1→ (λ _ → A i)
+      (wcom (λ _ → A i)
         (λ m → λ
-          { (ψ = i1) → a₁ i
-          ; (∀I (λ _ → φ) = i1) → e i 1=1 .fst (b̃-cap 1=1 k)
+          { (ψ = i1) → a₀-fix k
+          ; (∀I (λ _ → φ) = i1) → a₀-fix k
           ; (k = i0) → a₁-step m
-          ; (k = i1) → ouc a₀
+          ; (k = i1) → a₀-fix k
           })
+        i1
         (inc (a₀-fix k))
         i0)
 
@@ -327,32 +330,34 @@ module SomeGlue {ℓ} (A : I → Set ℓ) (φ : I)
 
     R-cap : ∀ k → PartialP {ℓ} φ (λ v → fiber (e i v .fst) (a₁-cap k))
     R-cap k = λ {(φ = i1) → ouc
-      (scom0→ (λ _ → fiber (e i 1=1 .fst) (a₁-cap k))
+      (wcom (λ _ → fiber (e i 1=1 .fst) (a₁-cap k))
         (λ m → λ
           { (ψ = i1) → C₂-cap k 1=1 (u i 1=1 , refl) m
           ; (∀I (λ _ → φ) = i1) → C₂-cap k 1=1 (b̃-cap 1=1 k , refl) m
           ; (k = i1) → C₂-cap k 1=1 (ouc ui , refl) m
           })
+        i0
         (inc (C₁-cap k 1=1))
         i1)}
 
     a₁'-cap : I → A i
     a₁'-cap k = ouc
-      (scom1→ (λ _ → A i)
+      (wcom (λ _ → A i)
         (λ m → λ
           { (ψ = i1) → a i 1=1
           ; (φ = i1) → R-cap k 1=1 .snd m
           ; (k = i1) → ouc a₀
           })
+        i1
         (inc (a₁-cap k))
         i0)
 
   glue-wcap : (ouc (glue-wcom i) ≡ ouc ui) [ ψ ↦ (λ {(ψ = i1) → refl}) ]
   glue-wcap = inc (λ k → glue (λ v → R-cap k v .fst) (a₁'-cap k))
 
-  -- check coherence
-  _ : PartialP {ℓ} φ (λ {(φ = i1) → ouc glue-wcap ≡ ouc (wcap (λ i → T i 1=1) u i ui)})
-  _ = λ {(φ = i1) → refl}
+  -- -- check coherence
+  -- _ : PartialP {ℓ} φ (λ {(φ = i1) → ouc glue-wcap ≡ ouc (wcap (λ i → T i 1=1) u i ui)})
+  -- _ = λ {(φ = i1) → refl}
 
 -- com from homogeneous com and coercion, necessary for higher inductive types
 module Recompose {ℓ} (A : ∀ i → Set ℓ)

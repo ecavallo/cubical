@@ -135,21 +135,15 @@ filli→i : ∀ {ℓ} (A : ∀ i → Set ℓ)
        ---------------------------
        → (ouc (filli→j A u i ui i) ≡ ouc ui) [ φ ↦ (λ {(φ = i1) → refl}) ]
 filli→i A {φ = φ} u i ui =
-  inc
-    (fill1→i
-      (λ k →
-        fill A
-          (λ j → λ { (φ = i1) → u j 1=1
-                   ; (i = i0) → fill A u (inc (fill (λ _ → A i0) (λ _ w → u i0 w) ui k)) j
-                   ; (i = i1) → ouc (filli→j A u (~ k) (inc (fill (λ l → A (~ l)) (λ l w → u (~ l) w) ui k)) j)
-                   })
-          (inc (filli→0 A u (i ∧ ~ k) (inc (fill (λ l → A (i ∧ ~ l)) (λ l w → u (i ∧ ~ l) w) ui k))))
-          (i ∧ ~ k)
-          ≡
-          fill (λ l → A (i ∧ ~ l)) (λ l w → u (i ∧ ~ l) w) ui k)
-      (λ k → (λ {(φ = i1) → refl}))
-      (inc refl)
-      i0)
+  inc (λ k →
+    comp (λ _ → A i)
+      (λ m → λ
+        { (φ = i1) → u i 1=1
+        ; (k = i0) → ouc (filli→j (λ j → A (j ∧ (i ∨ m))) (λ j v → u (j ∧ (i ∨ m)) v) i ui i)
+        ; (k = i1) → ouc (filli→j (λ _ → A i) (λ _ v → u i v) (i ∨ m) ui (i ∨ m))
+        })
+      (inc (ouc (filli→j (λ j → A ((j ∨ k) ∧ i)) (λ j v → u ((j ∨ k) ∧ i) v) i ui i)))
+    )
 
 -- We can reconstruct fill from hfill, coei→j, and the path coei→i ≡ id.
 -- The definition does not rely on the computational content of the coei→i path.
