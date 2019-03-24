@@ -15,6 +15,10 @@ record isCoolEquiv {A B : Set} (f : A → B) : Set where
 CoolEquiv : Set → Set → Set
 CoolEquiv A B = Σ[ f ∈ (A → B) ] (isCoolEquiv f)
 
+idCoolEquiv : (A : Set) → CoolEquiv A A
+idCoolEquiv A =
+  (idfun A , cool-equiv (idfun A) (λ _ → refl) (λ _ → refl) (λ _ → refl))
+
 IsoToCoolEquiv : {A B : Set} → Iso A B → CoolEquiv A B
 IsoToCoolEquiv {A} {B} (iso f g α β) =
   ( f
