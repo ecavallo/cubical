@@ -12,8 +12,14 @@ record isCoolEquiv {A B : Set} (f : A → B) : Set where
     leftInv : ∀ a → inv (f a) ≡ a
     adj : ∀ a → PathP (λ i → f (leftInv a i) ≡ f a) (rightInv (f a)) refl
 
+open isCoolEquiv public
+
 CoolEquiv : Set → Set → Set
 CoolEquiv A B = Σ[ f ∈ (A → B) ] (isCoolEquiv f)
+
+contractFiber : {A B : Set} (f : A → B) (ise : isCoolEquiv f) (a : A)
+  → Path (fiber f (f a)) (ise .inv (f a) , ise .rightInv (f a)) (a , refl)
+contractFiber f ise a = λ i → (ise .leftInv a i , ise .adj a i)
 
 idCoolEquiv : (A : Set) → CoolEquiv A A
 idCoolEquiv A =
