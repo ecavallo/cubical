@@ -7,6 +7,9 @@ open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.HLevels
 open import Cubical.Data.List
 open import Cubical.Data.Nat
+open import Cubical.Data.Prod
+open import Cubical.Data.Sum
+open import Cubical.Data.Unit
 
 -- move upstream
 
@@ -36,6 +39,46 @@ data 2ListQueue {ℓ} (A : Set ℓ) : Set ℓ where
 
 module _ {ℓ} {A : Set ℓ} (sA : isSet A) where
 
+  multitilt : (xs ys zs : List A) → Q⟨ xs ++ rev zs , ys ⟩ ≡ Q⟨ xs , ys ++ zs ⟩
+  multitilt xs ys [] = cong₂ Q⟨_,_⟩ (++-unit-r xs) (sym (++-unit-r ys))
+  multitilt xs ys (z ∷ zs) =
+    cong (λ ws → Q⟨ ws , ys ⟩) (sym (++-assoc xs (rev zs) [ z ]))
+    ∙ tilt (xs ++ rev zs) ys z
+    ∙ multitilt xs (ys ++ [ z ]) zs
+    ∙ cong (λ ws → Q⟨ xs , ws ⟩) (++-assoc ys [ z ] zs)
+
+  -- push into the first list, pop from the second if possible
+
+  push : A → 2ListQueue A → 2ListQueue A
+  push a Q⟨ xs , ys ⟩ = Q⟨ a ∷ xs , ys ⟩
+  push a (tilt xs ys z i) = tilt (a ∷ xs) ys z i
+  push a (trunc q q' α β i j) =
+    trunc _ _ (cong (push a) α) (cong (push a) β) i j
+
+  popFlush : List A → Unit ⊎ (A × 2ListQueue A)
+  popFlush [] = inl tt
+  popFlush (x ∷ xs) = inr (x , Q⟨ [] , xs ⟩)
+
+  pop : 2ListQueue A → Unit ⊎ (A × 2ListQueue A)
+  pop Q⟨ xs , [] ⟩ = popFlush (rev xs)
+  pop Q⟨ xs , y ∷ ys ⟩ = inr (y , Q⟨ xs , ys ⟩)
+  pop (tilt xs [] z i) = path i
+    where
+    path : popFlush (rev (xs ++ [ z ])) ≡ inr (z , Q⟨ xs , [] ⟩)
+    path =
+      cong popFlush (rev-++ xs [ z ])
+      ∙ cong (λ q → inr (z , q)) (sym (multitilt [] [] (rev xs)))
+      ∙ cong (λ ys → inr (z , Q⟨ ys , [] ⟩)) (rev-rev xs)
+  pop (tilt xs (y ∷ ys) z i) = inr (y , tilt xs ys z i)
+  pop (trunc q q' α β i j) =
+    isOfHLevelSum 0
+      (isProp→isSet isPropUnit)
+      (hLevelProd 2 sA trunc)
+      (pop q) (pop q') (cong pop α) (cong pop β)
+      i j
+
+  -- a queue is equivalent to a list
+
   eval : 2ListQueue A → List A
   eval Q⟨ xs , ys ⟩ = xs ++ rev ys
   eval (tilt xs ys z i) = path i
@@ -49,14 +92,6 @@ module _ {ℓ} {A : Set ℓ} (sA : isSet A) where
 
   quot : List A → 2ListQueue A
   quot xs = Q⟨ xs , [] ⟩
-
-  multitilt : (xs ys zs : List A) → Q⟨ xs ++ rev zs , ys ⟩ ≡ Q⟨ xs , ys ++ zs ⟩
-  multitilt xs ys [] = cong₂ Q⟨_,_⟩ (++-unit-r xs) (sym (++-unit-r ys))
-  multitilt xs ys (z ∷ zs) =
-    cong (λ ws → Q⟨ ws , ys ⟩) (sym (++-assoc xs (rev zs) [ z ]))
-    ∙ tilt (xs ++ rev zs) ys z
-    ∙ multitilt xs (ys ++ [ z ]) zs
-    ∙ cong (λ ws → Q⟨ xs , ws ⟩) (++-assoc ys [ z ] zs)
 
   quot∘eval : ∀ q → quot (eval q) ≡ q
   quot∘eval Q⟨ xs , ys ⟩ = multitilt xs [] ys
