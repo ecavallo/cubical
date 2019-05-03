@@ -37,10 +37,10 @@ isOfHLevelPathP A n levelA a₀ a₁ =
 
 record QUEUE {ℓ} (A : Set ℓ) : Set (ℓ-suc ℓ) where
   field
-    T : Set ℓ
-    emp : T
-    push : A → T → T
-    pop : T → Unit ⊎ (T × A)
+    Q : Set ℓ
+    emp : Q
+    push : A → Q → Q
+    pop : Q → Unit ⊎ (Q × A)
 
 map-result : ∀ {ℓ ℓ' ℓ''} {A : Set ℓ} {B : Set ℓ'} {C : Set ℓ''}
   → (B → C) → Unit ⊎ (B × A) → Unit ⊎ (C × A)
@@ -55,10 +55,10 @@ map-result-∘ g f (inr (b , a)) = refl
 
 module 2List {ℓ} (A : Set ℓ) (sA : isSet A) where
 
-  data Queue : Set ℓ where
-    Q⟨_,_⟩ : (xs ys : List A) → Queue
+  data Q : Set ℓ where
+    Q⟨_,_⟩ : (xs ys : List A) → Q
     tilt : ∀ xs ys z → Q⟨ xs ++ [ z ] , ys ⟩ ≡ Q⟨ xs , ys ++ [ z ] ⟩
-    trunc : (q q' : Queue) (α β : q ≡ q') → α ≡ β
+    trunc : (q q' : Q) (α β : q ≡ q') → α ≡ β
 
   multitilt : (xs ys zs : List A) → Q⟨ xs ++ rev zs , ys ⟩ ≡ Q⟨ xs , ys ++ zs ⟩
   multitilt xs ys [] = cong₂ Q⟨_,_⟩ (++-unit-r xs) (sym (++-unit-r ys))
@@ -70,20 +70,20 @@ module 2List {ℓ} (A : Set ℓ) (sA : isSet A) where
 
   -- push into the first list, pop from the second if possible
 
-  emp : Queue
+  emp : Q
   emp = Q⟨ [] , [] ⟩
 
-  push : A → Queue → Queue
+  push : A → Q → Q
   push a Q⟨ xs , ys ⟩ = Q⟨ a ∷ xs , ys ⟩
   push a (tilt xs ys z i) = tilt (a ∷ xs) ys z i
   push a (trunc q q' α β i j) =
     trunc _ _ (cong (push a) α) (cong (push a) β) i j
 
-  popFlush : List A → Unit ⊎ (Queue × A)
+  popFlush : List A → Unit ⊎ (Q × A)
   popFlush [] = inl tt
   popFlush (x ∷ xs) = inr (Q⟨ [] , xs ⟩ , x)
 
-  pop : Queue → Unit ⊎ (Queue × A)
+  pop : Q → Unit ⊎ (Q × A)
   pop Q⟨ xs , [] ⟩ = popFlush (rev xs)
   pop Q⟨ xs , y ∷ ys ⟩ = inr (Q⟨ xs , ys ⟩ , y)
   pop (tilt xs [] z i) = path i
@@ -101,26 +101,26 @@ module 2List {ℓ} (A : Set ℓ) (sA : isSet A) where
       (pop q) (pop q') (cong pop α) (cong pop β)
       i j
 
-  Q : QUEUE A
-  Q = record { T = Queue ; emp = emp ; push = push ; pop = pop }
+  Queue : QUEUE A
+  Queue = record { Q = Q ; emp = emp ; push = push ; pop = pop }
 
 module 1List {ℓ} (A : Set ℓ) where
 
-  Queue = List A
+  Q = List A
 
-  emp : Queue
+  emp : Q
   emp = []
 
-  push : A → Queue → Queue
+  push : A → Q → Q
   push = _∷_
 
-  pop : Queue → Unit ⊎ (Queue × A)
+  pop : Q → Unit ⊎ (Q × A)
   pop [] = inl tt
   pop (x ∷ []) = inr ([] , x)
   pop (x ∷ x' ∷ xs) = map-result (push x) (pop (x' ∷ xs))
 
-  Q : QUEUE A
-  Q = record { T = Queue ; emp = emp ; push = push ; pop = pop }
+  Queue : QUEUE A
+  Queue = record { Q = Q ; emp = emp ; push = push ; pop = pop }
 
 module Equivalence {ℓ} (A : Set ℓ) (sA : isSet A) where
 
@@ -129,7 +129,7 @@ module Equivalence {ℓ} (A : Set ℓ) (sA : isSet A) where
 
   open Two using (Q⟨_,_⟩ ; tilt ; trunc ; multitilt)
 
-  eval : Two.Queue → One.Queue
+  eval : Two.Q → One.Q
   eval Q⟨ xs , ys ⟩ = xs ++ rev ys
   eval (tilt xs ys z i) = path i
     where
@@ -140,7 +140,7 @@ module Equivalence {ℓ} (A : Set ℓ) (sA : isSet A) where
   eval (trunc q q' α β i j) =
     isOfHLevelList 0 sA (eval q) (eval q') (cong eval α) (cong eval β) i j
 
-  quot : One.Queue → Two.Queue
+  quot : One.Q → Two.Q
   quot xs = Q⟨ xs , [] ⟩
 
   quot∘eval : ∀ q → quot (eval q) ≡ q
@@ -171,18 +171,19 @@ module Equivalence {ℓ} (A : Set ℓ) (sA : isSet A) where
   quot∘push : ∀ a q → quot (One.push a q) ≡ Two.push a (quot q)
   quot∘push a q = refl
 
-  equiv : One.Queue ≃ Two.Queue
+  equiv : One.Q ≃ Two.Q
   equiv =
     isoToEquiv
       (iso quot eval quot∘eval eval∘quot)
 
-  same : One.Q ≡ Two.Q
+  same : One.Queue ≡ Two.Queue
   same i = record
-    { T = ua equiv i
+    { Q = ua equiv i
     ; emp =
       glue (λ {(i = i0) → One.emp; (i = i1) → Two.emp}) Two.emp
     ; push = λ a g →
-      glue (λ {(i = i0) → One.push a g; (i = i1) → Two.push a g}) (Two.push a (unglue (i ∨ ~ i) g))
+      glue (λ {(i = i0) → One.push a g; (i = i1) → Two.push a g})
+        (Two.push a (unglue (i ∨ ~ i) g))
     ; pop =
       {!!}
     }
