@@ -137,7 +137,7 @@ module Equivalence {ℓ} (A : Set ℓ) (sA : isSet A) where
     path =
       ++-assoc xs [ z ] (rev ys)
       ∙ cong (_++_ xs) (sym (rev-++ ys [ z ]))
-  eval (trunc q q' α β i j) =
+  eval (trunc q q' α β i j) = -- truncated case
     isOfHLevelList 0 sA (eval q) (eval q') (cong eval α) (cong eval β) i j
 
   quot : One.Q → Two.Q
@@ -145,14 +145,14 @@ module Equivalence {ℓ} (A : Set ℓ) (sA : isSet A) where
 
   quot∘eval : ∀ q → quot (eval q) ≡ q
   quot∘eval Q⟨ xs , ys ⟩ = multitilt xs [] ys
-  quot∘eval (tilt xs ys z i) =
+  quot∘eval (tilt xs ys z i) = -- truncated case
     isOfHLevelPathP
       (λ i → quot (eval (tilt xs ys z i)) ≡ tilt xs ys z i)
       0
       (trunc _ _ )
       (multitilt (xs ++ [ z ]) [] ys) (multitilt xs [] (ys ++ [ z ]))
       .fst i
-  quot∘eval (trunc q q' α β i j) =
+  quot∘eval (trunc q q' α β i j) = -- truncated case
     isOfHLevelPathP
       (λ i →
         PathP (λ j → quot (eval (trunc q q' α β i j)) ≡ trunc q q' α β i j)
