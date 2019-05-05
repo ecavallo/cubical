@@ -168,8 +168,23 @@ module Equivalence {ℓ} (A : Set ℓ) (sA : isSet A) where
   quot∘emp : quot One.emp ≡ Two.emp
   quot∘emp = refl
 
-  quot∘push : ∀ a q → quot (One.push a q) ≡ Two.push a (quot q)
-  quot∘push a q = refl
+  quot∘push : ∀ x xs → quot (One.push x xs) ≡ Two.push x (quot xs)
+  quot∘push x xs = refl
+
+  quot∘pop : ∀ xs → map-result quot (One.pop xs) ≡ Two.pop (quot xs)
+  quot∘pop [] = refl
+  quot∘pop (x ∷ []) = refl
+  quot∘pop (x ∷ x' ∷ xs) =
+    map-result-∘ quot (One.push x) (One.pop (x' ∷ xs))
+    ∙ sym (map-result-∘ (Two.push x) quot (One.pop (x' ∷ xs)))
+    ∙ cong (map-result (Two.push x)) (quot∘pop (x' ∷ xs))
+    ∙ lemma x x' (rev xs)
+    where
+    lemma : ∀ x x' ys
+      → map-result (Two.push x) (Two.popFlush (ys ++ [ x' ]))
+        ≡ Two.popFlush ((ys ++ [ x' ]) ++ [ x ])
+    lemma x x' [] i = inr (tilt [] [] x i , x')
+    lemma x x' (y ∷ ys) i = inr (tilt [] (ys ++ [ x' ]) x i , y)
 
   equiv : One.Q ≃ Two.Q
   equiv =
