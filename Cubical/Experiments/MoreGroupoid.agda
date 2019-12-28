@@ -56,7 +56,7 @@ lUnitCoh : ∀ {ℓ} {A : Type ℓ} {x y : A}
   → (p : x ≡ y) → lUnit (refl ∙ p) ≡ λ i → refl ∙ lUnit p i
 lUnitCoh p = squareToPath1 (λ i j → lUnit (lUnit p i) j)
 
-assocRefl : ∀ {ℓ} {A : Type ℓ} {x : A} -- y z : A} (p : x ≡ y) (q : y ≡ z)
+assocRefl : ∀ {ℓ} {A : Type ℓ} {x : A}
   → Square {A = x ≡ x} refl (assoc' refl refl refl) (λ k → refl ∙ lUnit refl k) (λ k → rUnit refl k ∙ refl)
 assocRefl {x = x} k m =
   rUnit {x = x} refl (k ∧ m) ∙ lUnit refl (k ∧ ~ m)
