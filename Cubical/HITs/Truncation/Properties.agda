@@ -138,10 +138,6 @@ rec : {n : ℕ}
       (hLevelTrunc n A → B)
 rec {B = B} h = Null.elim {B = λ _ → B} λ x → isOfHLevel→isSnNull h
 
-map : {n : ℕ} {B : Type ℓ'} (g : A → B)
-  → hLevelTrunc n A → hLevelTrunc n B
-map g = rec (isOfHLevelTrunc _) (λ a → ∣ g a ∣)
-
 elim : {n : ℕ}
   {B : hLevelTrunc n A → Type ℓ'}
   (hB : (x : hLevelTrunc n A) → isOfHLevel n (B x))
@@ -182,6 +178,16 @@ isModalIsProp (HLevelTruncModality n) = isPropIsOfHLevel n
 
 idemTrunc : (n : ℕ) → isOfHLevel n A → A ≃ (hLevelTrunc n A)
 idemTrunc n hA = ∣_∣ , isModalToIsEquiv (HLevelTruncModality n) hA
+
+-- functorial action
+
+map : {n : ℕ} {B : Type ℓ'} (g : A → B)
+  → hLevelTrunc n A → hLevelTrunc n B
+map g = rec (isOfHLevelTrunc _) (λ a → ∣ g a ∣)
+
+mapId : {n : ℕ} → ∀ t → map {n = n} (idfun A) t ≡ t
+mapId {n = n} =
+  elim (λ _ → isOfHLevelPath n (isOfHLevelTrunc n) _ _) (λ _ → refl)
 
 -- equivalences to prop/set/groupoid truncations
 

@@ -2,10 +2,12 @@
 module Cubical.Experiments.Freudenthal where
 
 open import Cubical.Foundations.Everything
+open import Cubical.Data.HomotopyGroup
 open import Cubical.Data.Nat
-open import Cubical.Data.Sigma
 import Cubical.Data.NatMinusTwo as ℕ₋₂
+open import Cubical.Data.Sigma
 open import Cubical.HITs.Nullification
+open import Cubical.HITs.Susp
 open import Cubical.HITs.Truncation as Trunc
 
 -- To be moved elsewhere
@@ -33,6 +35,9 @@ fiber≡ {f = f} h h' =
 
 isOfHLevelMap : ∀ {ℓ ℓ'} (n : ℕ) {A : Type ℓ} {B : Type ℓ'} (f : A → B) → Type (ℓ-max ℓ ℓ')
 isOfHLevelMap n f = ∀ b → isOfHLevel n (fiber f b)
+
+∙Susp : ∀ {ℓ} (A : Type ℓ) → Pointed ℓ
+∙Susp A = Susp A , north
 
 -- connectedness
 
@@ -113,6 +118,8 @@ isHLevelConnectedPoint n connA a₀ a =
     snd (_ ,_) (λ _ → refl)
     (isHLevelConnectedPath n connA a₀ a)
 
+-- wedge connectivity
+
 module WedgeConnectivity {ℓ ℓ' ℓ''} (n m : ℕ)
   (A : Pointed ℓ) (connA : isHLevelConnected (suc n) (typ A))
   (B : Pointed ℓ') (connB : isHLevelConnected (suc m) (typ B))
@@ -149,3 +156,67 @@ module WedgeConnectivity {ℓ ℓ' ℓ''} (n m : ℕ)
   right : ∀ b → extension (pt A) b ≡ g b
   right = funExt⁻ (cong fst (funExt⁻ (main .fst .snd) _))
 
+-- freudenthal (partial)
+
+module Freudenthal {ℓ} (n : ℕ)
+  {A : Pointed ℓ} (connA : isHLevelConnected (suc (suc n)) (typ A))
+  where
+
+  private
+    2n+2 = suc n + suc n
+
+  σ : typ A → typ (Ω (∙Susp (typ A)))
+  σ a = merid a ∙ merid (pt A) ⁻¹
+
+  Code : (y : Susp (typ A)) → north ≡ y → Type ℓ
+  Code north p = hLevelTrunc 2n+2 (fiber σ p)
+  Code south q = hLevelTrunc 2n+2 (fiber merid q)
+  Code (merid a i) p =
+    Glue
+      (hLevelTrunc 2n+2
+        (fiber (λ x j → compPath-filler (merid x) (merid a ⁻¹) (~ i) j) p))
+      (λ
+        { (i = i0) → _ , (fwd p a , isEquivFwd p a)
+        ; (i = i1) → _ , idEquiv _
+        })
+    where
+    module WC (p : north ≡ north) =
+      WedgeConnectivity (suc n) (suc n) A connA A connA
+        (λ a b →
+          ( (σ b ≡ p → hLevelTrunc 2n+2 (fiber (λ x → merid x ∙ merid a ⁻¹) p))
+          , isOfHLevelPi 2n+2 λ _ → isOfHLevelTrunc 2n+2
+          ))
+        (λ a r → ∣ a , (rCancel (merid a) ∙ rCancel (merid (pt A)) ⁻¹) ∙ r ∣)
+        (λ b r → ∣ b , r ∣)
+        (funExt λ r →
+          cong ∣_∣
+            (cong (pt A ,_)
+              (cong (_∙ r) (rCancel (rCancel (merid (pt A)))) ∙ lUnit r ⁻¹)))
+      
+    fwd : (p : north ≡ north) (a : typ A) 
+      → hLevelTrunc 2n+2 (fiber σ p)
+      → hLevelTrunc 2n+2 (fiber (λ x → merid x ∙ merid a ⁻¹) p)
+    fwd p a = Trunc.rec (isOfHLevelTrunc 2n+2) (uncurry (WC.extension p a))
+
+    isEquivFwd : (p : north ≡ north) (a : typ A) → isEquiv (fwd p a)
+    isEquivFwd p a .equiv-proof =
+      isEquivPrecomposeConnected (suc n)
+        (λ a →
+          ( (∀ t → isContr (fiber (fwd p a) t))
+          , isProp→isOfHLevelSuc n (isPropPi λ _ → isPropIsContr)
+          ))
+        (λ _ → pt A)
+        (isHLevelConnectedPoint (suc n) connA (pt A))
+        .equiv-proof
+        (λ _ → Trunc.elim
+          (λ _ → isProp→isOfHLevelSuc (n + suc n) isPropIsContr)
+          (λ fib →
+            subst (λ k → isContr (fiber k ∣ fib ∣))
+              (cong (Trunc.rec (isOfHLevelTrunc 2n+2) ∘ uncurry)
+                (funExt (WC.right p) ⁻¹))
+              (subst isEquiv
+                (funExt (Trunc.mapId) ⁻¹)
+                (idIsEquiv _)
+                .equiv-proof ∣ fib ∣)
+            ))
+        .fst .fst a
