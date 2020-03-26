@@ -82,6 +82,10 @@ isOfHLevelPath' : (n : ℕ) → isOfHLevel (suc n) A → (x y : A) → isOfHLeve
 isOfHLevelPath' 0 = isProp→isContrPath
 isOfHLevelPath' (suc n) h x y = h x y
 
+isOfHLevelPath'⁻ : (n : ℕ) → ((x y : A) → isOfHLevel n (x ≡ y)) → isOfHLevel (suc n) A
+isOfHLevelPath'⁻ zero h x y = h x y .fst
+isOfHLevelPath'⁻ (suc n) h = h
+
 isOfHLevelPath : (n : ℕ) → isOfHLevel n A → (x y : A) → isOfHLevel n (x ≡ y)
 isOfHLevelPath 0 h x y = isContr→isContrPath h x y
 isOfHLevelPath (suc n) h x y = isOfHLevelSuc n (isOfHLevelPath' n h x y)

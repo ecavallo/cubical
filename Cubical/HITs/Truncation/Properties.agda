@@ -138,6 +138,10 @@ rec : {n : ℕ}
       (hLevelTrunc n A → B)
 rec {B = B} h = Null.elim {B = λ _ → B} λ x → isOfHLevel→isSnNull h
 
+map : {n : ℕ} {B : Type ℓ'} (g : A → B)
+  → hLevelTrunc n A → hLevelTrunc n B
+map g = rec (isOfHLevelTrunc _) (λ a → ∣ g a ∣)
+
 elim : {n : ℕ}
   {B : hLevelTrunc n A → Type ℓ'}
   (hB : (x : hLevelTrunc n A) → isOfHLevel n (B x))
