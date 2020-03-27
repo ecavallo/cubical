@@ -45,8 +45,7 @@ rCancel-filler' : ∀ {ℓ} {A : Type ℓ} {x y : A} (p : x ≡ y) → (i j k : 
 rCancel-filler' {x = x} {y} p i j k =
   hfill
     (λ i → λ
-      { (j = i0) → compPath-filler p (p ⁻¹) i k
-      ; (j = i1) → p (~ i ∧ k)
+      { (j = i1) → p (~ i ∧ k)
       ; (k = i0) → x
       ; (k = i1) → p (~ i)
       })
