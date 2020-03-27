@@ -39,6 +39,23 @@ isOfHLevelMap n f = ∀ b → isOfHLevel n (fiber f b)
 ∙Susp : ∀ {ℓ} (A : Type ℓ) → Pointed ℓ
 ∙Susp A = Susp A , north
 
+-- these will be more convenient in this case (ugh)
+
+rCancel-filler' : ∀ {ℓ} {A : Type ℓ} {x y : A} (p : x ≡ y) → (i j k : I) → A
+rCancel-filler' {x = x} {y} p i j k =
+  hfill
+    (λ i → λ
+      { (j = i0) → compPath-filler p (p ⁻¹) i k
+      ; (j = i1) → p (~ i ∧ k)
+      ; (k = i0) → x
+      ; (k = i1) → p (~ i)
+      })
+    (inS (p k))
+    (~ i)
+
+rCancel' : ∀ {ℓ} {A : Type ℓ} {x y : A} (p : x ≡ y) → p ∙ p ⁻¹ ≡ refl
+rCancel' p j k = rCancel-filler' p i0 j k
+
 -- connectedness
 
 isHLevelConnected : ∀ {ℓ} (n : ℕ) (A : Type ℓ) → Type ℓ
@@ -163,36 +180,24 @@ module Freudenthal {ℓ} (n : ℕ)
   {A : Pointed ℓ} (connA : isHLevelConnected (suc (suc n)) (typ A))
   where
 
-  private
-    2n+2 = suc n + suc n
-
   σ : typ A → typ (Ω (∙Susp (typ A)))
   σ a = merid a ∙ merid (pt A) ⁻¹
 
-  Code : (y : Susp (typ A)) → north ≡ y → Type ℓ
-  Code north p = hLevelTrunc 2n+2 (fiber σ p)
-  Code south q = hLevelTrunc 2n+2 (fiber merid q)
-  Code (merid a i) p =
-    Glue
-      (hLevelTrunc 2n+2
-        (fiber (λ x j → compPath-filler (merid x) (merid a ⁻¹) (~ i) j) p))
-      (λ
-        { (i = i0) → _ , (fwd p a , isEquivFwd p a)
-        ; (i = i1) → _ , idEquiv _
-        })
-    where
+  private
+    2n+2 = suc n + suc n
+
     module WC (p : north ≡ north) =
       WedgeConnectivity (suc n) (suc n) A connA A connA
         (λ a b →
           ( (σ b ≡ p → hLevelTrunc 2n+2 (fiber (λ x → merid x ∙ merid a ⁻¹) p))
           , isOfHLevelPi 2n+2 λ _ → isOfHLevelTrunc 2n+2
           ))
-        (λ a r → ∣ a , (rCancel (merid a) ∙ rCancel (merid (pt A)) ⁻¹) ∙ r ∣)
+        (λ a r → ∣ a , (rCancel' (merid a) ∙ rCancel' (merid (pt A)) ⁻¹) ∙ r ∣)
         (λ b r → ∣ b , r ∣)
         (funExt λ r →
           cong ∣_∣
             (cong (pt A ,_)
-              (cong (_∙ r) (rCancel (rCancel (merid (pt A)))) ∙ lUnit r ⁻¹)))
+              (cong (_∙ r) (rCancel' (rCancel' (merid (pt A)))) ∙ lUnit r ⁻¹)))
       
     fwd : (p : north ≡ north) (a : typ A) 
       → hLevelTrunc 2n+2 (fiber σ p)
@@ -221,3 +226,48 @@ module Freudenthal {ℓ} (n : ℕ)
                 .equiv-proof ∣ fib ∣)
             ))
         .fst .fst a
+
+    interpolate : (a : typ A)
+      → PathP (λ i → typ A → north ≡ merid a i) (λ x → merid x ∙ merid a ⁻¹) merid
+    interpolate a i x j = compPath-filler (merid x) (merid a ⁻¹) (~ i) j
+
+  Code : (y : Susp (typ A)) → north ≡ y → Type ℓ
+  Code north p = hLevelTrunc 2n+2 (fiber σ p)
+  Code south q = hLevelTrunc 2n+2 (fiber merid q)
+  Code (merid a i) p =
+    Glue
+      (hLevelTrunc 2n+2 (fiber (interpolate a i) p))
+      (λ
+        { (i = i0) → _ , (fwd p a , isEquivFwd p a)
+        ; (i = i1) → _ , idEquiv _
+        })
+
+  encode : (y : Susp (typ A)) (p : north ≡ y) → Code y p
+  encode y = J Code ∣ pt A , rCancel' (merid (pt A)) ∣
+
+  encodeMerid : (a : typ A) → encode south (merid a) ≡ ∣ a , refl ∣
+  encodeMerid a =
+    cong (transport (λ i → gluePath i))
+      (funExt⁻ (WC.left refl a) _ ∙ cong ∣_∣ (cong (a ,_) (lem _ _)))
+    ∙ transport (PathP≡Path gluePath _ _)
+      (λ i → ∣ a , (λ j k → rCancel-filler' (merid a) i j k) ∣)
+    where
+    gluePath : I → Type _
+    gluePath i = hLevelTrunc 2n+2 (fiber (interpolate a i) (λ j → merid a (i ∧ j)))
+
+    lem : ∀ {ℓ} {A : Type ℓ} {x y z : A} (p : x ≡ y) (q : z ≡ y) → (p ∙ q ⁻¹) ∙ q ≡ p
+    lem p q = assoc p (q ⁻¹) q ⁻¹ ∙ cong (p ∙_) (lCancel q) ∙ rUnit p ⁻¹
+
+  contractCodeSouth : (p : north ≡ south) (c : Code south p) → encode south p ≡ c
+  contractCodeSouth p =
+    Trunc.elim
+      (λ _ → isOfHLevelPath 2n+2 (isOfHLevelTrunc 2n+2) _ _)
+      (uncurry λ a →
+        J (λ p r → encode south p ≡ ∣ a , r ∣) (encodeMerid a))
+
+  isConnectedMerid : isHLevelConnectedMap 2n+2 (merid {A = typ A})
+  isConnectedMerid p = encode south p , contractCodeSouth p
+
+  isConnectedσ : isHLevelConnectedMap 2n+2 σ
+  isConnectedσ =
+    transport (λ i → isHLevelConnectedMap 2n+2 (interpolate (pt A) (~ i))) isConnectedMerid
