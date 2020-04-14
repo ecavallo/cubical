@@ -21,8 +21,10 @@ _∷_ : ∀ {n} → I → (Fin n → I) → (Fin (suc n) → I)
 cnx∧ : ∀ {n} → (Fin n → I) → I → (Fin n → I)
 cnx∧ i k f = i f ∧ k
 
--- n-ary equivariant composition from CCHM/OP-style composition for Dedekind cubes.
--- (Some reversals occur in this definition, but only to simulate composition 1→0
+{-
+  n-ary equivariant composition from CCHM/OP-style composition for Dedekind cubes.
+  (Some reversals occur in this definition, but only to simulate composition 1→0
+-}
 
 module _ (n : ℕ) where
 
@@ -70,258 +72,216 @@ module _ (n : ℕ) where
     cap : (⇒ i) ≡ a
     cap = outS F.cap
 
--- deriving J from equivariant composition in the usual way
+{-
+  Simulating connections using equivariant composition
 
-module PathJ {A : Type₀} (C : (I → A) → Type₀) (d : ∀ a → (C (λ _ → a))) where
+  Past this point, we don't use connections except via Fill/Coe defined above,
+  so the terms below can be defined in equivariant cartesian cubical type theory.
+-}
 
-  elim : ∀ p → C p
-  elim p =
-    Coe.⇒ 1
-      (λ k → C (λ i → face' (k fzero) i))
-      (λ _ → i0)
-      (d (p i0))
-      (λ _ → i1)
-    where
-    module Face (k : I) =
-      Fill 1
-        (λ _ → A)
-        (λ l → λ
-          { (k = i0) → p i0
-          ; (k = i1) → p (l fzero)
-          })
-        (λ _ → i0)
-        (inS (p i0))
 
-    face' : I → I → A
-    face' k l = outS
+{-
+
+  The key lemma is n-dimensional singleton contractibility; this is also the
+  only place where equivariance is used. As with transp in CHM, we define the
+  lemma relative to a cofibration φ on which the input is assumed to be constant
+  and guarantee the output is constant on the same φ, which will be convenient
+  later on.
+
+-}
+
+singl1 : {A : Type₀} (a : A) (φ : I) (p : I → A [ φ ↦ (λ _ → a) ])
+  (k : I) → I → A [ φ ∨ ~ k ↦ (λ _ → outS (p i0)) ]
+singl1 {A = A} a φ p k l =
+  inS
+    (outS
       (Fill.⇒ 1
         (λ _ → A)
         (λ m → λ
-          { (k = i0) → p i0
-          ; (k = i1) → p l
+          { (k = i0) → outS (p i0)
+          ; (k = i1) → outS (p l)
           ; (l = i0) → outS (Face.cap k) (m fzero)
+          ; (φ = i1) → a
           })
         (λ _ → i0)
         (inS (outS (Face.⇒ k (λ _ → l))))
-        (λ _ → i1))
-
-  onRefl : ∀ a → elim (λ _ → a) ≡ d a
-  onRefl a j =
-    outS
-      (Fill.⇒ 1
-        (λ k → C (λ i → face' (k fzero) i))
-        (λ k → λ {(j = i1) → d a})
-        (λ _ → i0)
-        (inS (d a))
-        (λ _ → i1))
-    where
-    module Face (k : I) =
-      Fill 1
-        (λ _ → A)
-        (λ l → λ
-          { (k = i0) → a
-          ; (k = i1) → a
-          ; (j = i1) → a
-          })
-        (λ _ → i0)
-        (inS a)
-
-    face' : I → I → A
-    face' k l = outS
-      (Fill.⇒ 1
-        (λ _ → A)
-        (λ m → λ
-          { (k = i0) → a
-          ; (k = i1) → a
-          ; (l = i0) → outS (Face.cap k) (m fzero)
-          ; (j = i1) → a
-          })
-        (λ _ → i0)
-        (inS (outS (Face.⇒ k (λ _ → l))))
-        (λ _ → i1))
-
--- J for squares. Using equivariance of the Kan operations, we can also define J
--- for n-cubes in an equivariant way, although Cubical Agda isn't expressive
--- enough to let us write it down except in concrete cases.
-
-module SquareJ {A : Type₀} (C : (I → I → A) → Type₀) (d : ∀ a → C (λ _ _ → a)) where
-
-  elim : ∀ α → C α
-  elim α =
-    Coe.⇒ 2
-      (λ k → C (λ i₀ i₁ → face' (k fzero) (k (fsuc fzero)) i₀ i₁))
+        (λ _ → i1)))
+  where
+  module Face (k : I) =
+    Fill 1
+      (λ _ → A)
+      (λ l → λ
+        { (k = i0) → outS (p i0)
+        ; (k = i1) → outS (p (l fzero))
+        ; (φ = i1) → a
+        })
       (λ _ → i0)
-      (d (α i0 i0))
-      (λ _ → i1)
-    where
-    module Face (k₀ k₁ : I) =
-      Fill 2
-        (λ _ → A)
-        (λ l → λ
-          { (k₀ = i0) (k₁ = i0) → α i0 i0
-          ; (k₀ = i1) (k₁ = i1) → α (l fzero) (l (fsuc fzero))
-          })
-        (λ _ → i0)
-        (inS (α i0 i0))
+      (inS (outS (p i0)))
 
-    face' : I → I → I → I → A
-    face' k₀ k₁ l₀ l₁ = outS
+singl2 : {A : Type₀} (a : A) (φ : I) (α : I → I → A [ φ ↦ (λ _ → a) ])
+  (k : I) → I → I → A [ φ ∨ ~ k ↦ (λ _ → outS (α i0 i0)) ]
+singl2 {A = A} a φ α k l₀ l₁ =
+  inS
+    (outS
       (Fill.⇒ 1
         (λ _ → A)
         (λ m → λ
-          { (k₀ = i0) (k₁ = i0) → α i0 i0
-          ; (k₀ = i1) (k₁ = i1) → α l₀ l₁
-          ; (l₀ = i0) (l₁ = i0) → outS (Face.cap k₀ k₁) (m fzero)
+          { (k = i0) → outS (α i0 i0)
+          ; (k = i1) → outS (α l₀ l₁)
+          ; (l₀ = i0) (l₁ = i0) → outS (Face.cap k) (m fzero)
+          ; (φ = i1) → a
           })
         (λ _ → i0)
-        (inS (outS (Face.⇒ k₀ k₁ (l₀ ∷ l₁ ∷ []))))
-        (λ _ → i1))
+        (inS (outS (Face.⇒ k (l₀ ∷ l₁ ∷ []))))
+        (λ _ → i1)))
+  where
+  module Face (k : I) =
+    Fill 2
+      (λ _ → A)
+      (λ l → λ
+        { (k = i0) → outS (α i0 i0)
+        ; (k = i1) → outS (α (l fzero) (l (fsuc fzero)))
+        ; (φ = i1) → a
+        })
+      (λ _ → i0)
+      (inS (outS (α i0 i0)))
 
-  onRefl : ∀ a → elim (λ _ _ → a) ≡ d a
-  onRefl a j =
-    outS
-      (Fill.⇒ 2
-        (λ k → C (λ i₀ i₁ → face' (k fzero) (k (fsuc fzero)) i₀ i₁))
-        (λ k → λ { (j = i1) → d a })
-        (λ _ → i0)
-        (inS (d a))
-        (λ _ → i1))
-    where
-    module Face (k₀ k₁ : I) =
-      Fill 2
-        (λ _ → A)
-        (λ l → λ
-          { (k₀ = i0) (k₁ = i0) → a
-          ; (k₀ = i1) (k₁ = i1) → a
-          ; (j = i1) → a
-          })
-        (λ _ → i0)
-        (inS a)
+{-
+  Examples of connections
 
-    face' : I → I → I → I → A
-    face' k₀ k₁ l₀ l₁ = outS
-      (Fill.⇒ 1
-        (λ _ → A)
-        (λ m → λ
-          { (k₀ = i0) (k₁ = i0) → a
-          ; (k₀ = i1) (k₁ = i1) → a
-          ; (l₀ = i0) (l₁ = i0) → outS (Face.cap k₀ k₁) (m fzero)
-          ; (j = i1) → a
-          })
-        (λ _ → i0)
-        (inS (outS (Face.⇒ k₀ k₁ (l₀ ∷ l₁ ∷ []))))
-        (λ _ → i1))
+  We're interested in defining "α ∘ f" : Iᵐ → A where α : Iⁿ → A is some n-cube
+  and f : Iᵐ → Iⁿ is a map generated by connections. We need this definition to
+  be well-defined in the sense of respecting equations like x ∧ y = y ∧ x, but
+  also to commute with cartesian substitutions.
+
+  We do this using singleton contractibility to reduce to the case where α is
+  constant, so more-or-less "by J". (Using the cofibration φ, we csidestep the
+  issue of J not being definitionally identity on refl.)
+
+  The definitions below show how to define "α ∘ f" for a small instances of f;
+  hopefully the general pattern is clear. In order to ensure the definition
+  commutes with degeneracies, we should first factor f maximally as some f' ⊗ Iᵏ
+  and then apply the reciple to f'.
+
+  Since Cubical Agda does not have diagonal cofibrations, we cannot ensure our
+  definitions commute with diagonal substitutions; but if we did have them, we
+  could do it in the same was we ensure they commute with faces.
+-}
+
+-- f(i₀,i₁) = i₀ ∧ i₁
+and : {A : Type₀} (a : A) (φ : I)
+  → (I → A [ φ ↦ (λ _ → a) ]) → I → I → A
+and {A = A} _ φ p i₀ i₁ =
+  hcomp
+    (λ l → λ
+      { (i₀ = i0) → a
+      ; (i₀ = i1) → outS (singl1 a φ p l i₁)
+      ; (i₁ = i0) → a
+      ; (i₁ = i1) → outS (singl1 a φ p l i₀)
+      ; (φ = i1) → a
+      })
+    a
+  where
+  a = outS (p i0)
+
+-- f(i₀,i₁) = i₀ ∨ i₁
+or : {A : Type₀} (a : A) (φ : I)
+  → (I → A [ φ ↦ (λ _ → a) ]) → I → I → A
+or {A = A} _ φ p i₀ i₁ =
+  hcomp
+    (λ l → λ
+      { (i₀ = i0) → outS (singl1 a φ p l i₁)
+      ; (i₀ = i1) → outS (singl1 a φ p l i1)
+      ; (i₁ = i0) → outS (singl1 a φ p l i₀)
+      ; (i₁ = i1) → outS (singl1 a φ p l i1)
+      ; (φ = i1) → a
+      })
+    a
+  where
+  a = outS (p i0)
+
+-- f(i₀,i₁,i₂) = i₀ ∧ i₁ ∧ i₂
+ternaryAnd : {A : Type₀} (a : A) (φ : I)
+  → (I → A [ φ ↦ (λ _ → a) ]) → I → I → I → A
+ternaryAnd {A = A} _ φ p i₀ i₁ i₂ =
+  hcomp
+    (λ l → λ
+      { (i₀ = i0) → a
+      ; (i₀ = i1) → and a (φ' l) (α' l) i₁ i₂
+      ; (i₁ = i0) → a
+      ; (i₁ = i1) → and a (φ' l) (α' l) i₀ i₂
+      ; (i₂ = i0) → a
+      ; (i₂ = i1) → and a (φ' l) (α' l) i₀ i₁
+      ; (φ = i1) → a
+      })
+    a
+  where
+  a = outS (p i0)
+
+  φ' : I → I
+  φ' l = φ ∨ ~ l
+
+  α' : (l : I) → I → A [ φ ∨ ~ l ↦ (λ _ → a) ]
+  α' = singl1 a φ p
+
+-- f(i₀,i₁,j₀,j₁) = (i₀ ∧ i₁, j₀ ∧ j₁)
+doubleAnd : {A : Type₀} (a : A) (φ : I)
+  → (I → I → A [ φ ↦ (λ _ → a) ]) → I → I → I → I → A
+doubleAnd {A = A} _ φ α i₀ i₁ j₀ j₁ =
+  hcomp
+    (λ l → λ
+      { (i₀ = i0) → and a (φ' l) (λ j → α' l i0 j) j₀ j₁
+      ; (i₀ = i1) → and a (φ' l) (λ j → α' l i₁ j) j₀ j₁
+      ; (i₁ = i0) → and a (φ' l) (λ j → α' l i0 j) j₀ j₁
+      ; (i₁ = i1) → and a (φ' l) (λ j → α' l i₀ j) j₀ j₁
+      ; (j₀ = i0) → and a (φ' l) (λ i → α' l i i0) i₀ i₁
+      ; (j₀ = i1) → and a (φ' l) (λ i → α' l i j₁) i₀ i₁
+      ; (j₁ = i0) → and a (φ' l) (λ i → α' l i i0) i₀ i₁
+      ; (j₁ = i1) → and a (φ' l) (λ i → α' l i j₀) i₀ i₁
+      ; (φ = i1) → outS (α i0 i0)
+      })
+    (outS (α i0 i0))
+  where
+  a : A
+  a = outS (α i0 i0)
+
+  φ' : I → I
+  φ' l = φ ∨ ~ l
+
+  α' : (l : I) → I → I → A [ φ ∨ ~ l ↦ (λ _ → outS (α i0 i0)) ]
+  α' = singl2 a φ α
 
 private
-  -- equivariance test
-  test₀ : {A : Type₀} (C : (I → I → A) → Type₀)
-    (d : ∀ a → C (λ _ _ → a))
-    (α : I → I → A)
-    → SquareJ.elim C d α ≡ SquareJ.elim (λ β → C (λ i j → β j i)) d (λ j i → α i j)
-  test₀ C d α = refl
+  -- This is the equation that relies on equivariance
+  test₀ : {A : Type₀} (α : I → I → A)
+    → ∀ i₀ i₁ j₀ j₁
+    → doubleAnd (α i0 i0) i0 (λ i j → inS (α i j)) i₀ i₁ j₀ j₁
+      ≡ doubleAnd (α i0 i0) i0 (λ j i → inS (α i j)) j₀ j₁ i₀ i₁
+  test₀ α i₀ i₁ j₀ j₁ = refl
 
--- We can use J for n-cubes as a convenient way to define connections that
--- satisfy the necessary equations.
+-- f(i₀,i₁,j₀,j₁) = (i₀ ∨ i₁, j₀ ∨ j₁)
+doubleOr : {A : Type₀} (a : A) (φ : I)
+  → (I → I → A [ φ ↦ (λ _ → a) ]) → I → I → I → I → A
+doubleOr {A = A} _ φ α i₀ i₁ j₀ j₁ =
+  hcomp
+    (λ l → λ
+      { (i₀ = i0) → or a (φ' l) (λ j → α' l i₁ j) j₀ j₁
+      ; (i₀ = i1) → or a (φ' l) (λ j → α' l i1 j) j₀ j₁
+      ; (i₁ = i0) → or a (φ' l) (λ j → α' l i₀ j) j₀ j₁
+      ; (i₁ = i1) → or a (φ' l) (λ j → α' l i1 j) j₀ j₁
+      ; (j₀ = i0) → or a (φ' l) (λ i → α' l i j₁) i₀ i₁
+      ; (j₀ = i1) → or a (φ' l) (λ i → α' l i i1) i₀ i₁
+      ; (j₁ = i0) → or a (φ' l) (λ i → α' l i j₀) i₀ i₁
+      ; (j₁ = i1) → or a (φ' l) (λ i → α' l i i1) i₀ i₁
+      ; (φ = i1) → outS (α i0 i0)
+      })
+    (outS (α i0 i0))
+  where
+  a : A
+  a = outS (α i0 i0)
 
--- The definitions here don't actually satisfy the equations; this is because of
--- two issues.
+  φ' : I → I
+  φ' l = φ ∨ ~ l
 
--- (1) Coercion in a square type in Cubical Agda doesn't commute with flipping
--- the square along its diagonal. The coercion could be redefined so that this
--- does hold (or we could expand things out and do it manually, but then the
--- idea is less clear).
-
--- (2) We won't get equations like p (i ∧ i) = p i. For this we would need
--- diagonal cofibrations. With diagonal cofibrations, we could ensure these in the
--- same way we ensure the face equations.
-
-
--- And.elim p i₀ i₁ ≈ p (i₀ ∧ i₁)
---
--- The equations we'd need to hold, besides the face equations, are
---
--- And.elim p i₀ i₁ = And.elim p i₁ i₀
--- And.elim p i i = p i
---
--- So far we don't use equivariance at all.
-module And {A : Type₀} =
-  PathJ {A = A} (λ p → Square refl (λ i → p i) refl (λ i → p i)) (λ _ → refl)
-
-
--- TernaryAnd.elim p i₀ i₁ i₂ ≈ p (i₀ ∧ i₁ ∧ i₂)
---
--- The equations we'd need to hold, besides the face equations, are
---
--- TernaryAnd.elim p i₀ i₁ i₂ = TernaryAnd.elim p i₁ i₀ i₂ (and other permutations)
--- TernaryAnd.elim p i i i₂ = And.elim p i i₂ (and other diagonals)
---
--- This still does not require equivariant composition.
-module TernaryAnd {A : Type₀} =
-  PathJ {A = A}
-    (λ p →
-      Cube
-        refl
-        (And.elim p)
-        refl
-        (And.elim p)
-        (refl {x = refl {x = p i0}})
-        (And.elim p))
-    (λ a →
-      -- this transport could of course be replaced with a Coe.⇒ but Agda will
-      -- have a harder time checking that
-      transport⁻
-        (λ t →
-          Cube
-            refl
-            (And.onRefl a t)
-            refl
-            (And.onRefl a t)
-            (refl {x = refl {x = a}})
-            (And.onRefl a t))
-        refl)
-
-
--- And².elim α i₀ i₁ j₀ j₁ ≈ α (i₀ ∧ i₁) (j₀ ∧ j₁)
---
--- The equations we'd need to hold, besides the face equations, are
---
--- And².elim α i₀ i₁ j₀ j₁ = And².elim α i₁ i₀ j₀ j₁ (likewise for j)
--- And².elim α i₀ i₁ j₀ j₁ = And².elim (λ j i → α i j) j₀ j₁ i₀ i₁
--- And².elim α i i j₀ j₁ = And.elim (α i) j₀ j₁ (likewise for j)
---
--- The second equation is the one for which we use equivariance of composition/J
-module And² {A : Type₀} =
-  SquareJ {A = A}
-    (λ α → SquareP
-      (λ i₀ i₁ → Square
-        (λ _ → And.elim (λ i → α i i0) i₀ i₁)
-        (λ j → And.elim (λ i → α i j) i₀ i₁)
-        (λ _ → And.elim (λ i → α i i0) i₀ i₁)
-        (λ j → And.elim (λ i → α i j) i₀ i₁))
-      (λ _ → And.elim (λ j → α i0 j))
-      (λ i → And.elim (λ j → α i j))
-      (λ _ → And.elim (λ j → α i0 j))
-      (λ i → And.elim (λ j → α i j)))
-    (λ a →
-      transport⁻
-        (λ t →
-          SquareP
-            (λ i₀ i₁ → Square
-              (λ _ → And.onRefl a t i₀ i₁)
-              (λ _ → And.onRefl a t i₀ i₁)
-              (λ _ → And.onRefl a t i₀ i₁)
-              (λ _ → And.onRefl a t i₀ i₁))
-            (λ _ → And.onRefl a t)
-            (λ _ → And.onRefl a t)
-            (λ _ → And.onRefl a t)
-            (λ _ → And.onRefl a t))
-        refl)
-   
-
--- We can repeat this recipe for arbitrary α : Iⁿ → A and f : Iᵐ → Iⁿ where f is
--- built out of connections. To make sure this commute with degeneracies, we need
---
--- weaken (connect α f) = connect (weaken α) (f ⊗ I).
---
--- To make sure this holds, first rewrite f as (f' ⊗ Iᵏ) : Iᵐ⁻ᵏ ⊗ Iᵏ → Iⁿ⁻ᵏ ⊗ Iᵏ
--- in a maximal way and then follow the recipe using f'
+  α' : (l : I) → I → I → A [ φ ∨ ~ l ↦ (λ _ → outS (α i0 i0)) ]
+  α' = singl2 a φ α
