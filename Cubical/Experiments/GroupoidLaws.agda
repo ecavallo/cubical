@@ -1,7 +1,5 @@
 {-
 
-Weird idea
-
 Proofs of groupoid laws inspired by CCHM identity types and transp
 
 -}
@@ -15,6 +13,17 @@ private
     ℓ : Level
     A : Type ℓ
     x y z w v : A
+
+{-
+  First, prove theorems where each path is paired with a specified cofibration on which it is constant.
+  We get the ordinary theorems by instantiating all cofibrations with i0 (see below).
+
+  This is basically like proving the theorems using CCHM-style Id, although we don't need those types to exist
+  in order to do proofs in this style. We can do cubical-primitive-style proofs as well as more J-like ones
+  (see the pentagon below).
+
+  Unfortunately all the inS's and outS's make these proofs very unpleasant to read in Cubical Agda.
+-}
 
 module WithCofs where
 
@@ -87,6 +96,7 @@ module WithCofs where
       (λ j → conc φ (ψ ∧ ξ ∧ χ) p (λ i → inS (assoc ψ ξ χ q r s j i)))
       (λ j → conc (φ ∧ ψ ∧ ξ) χ (λ i → inS (assoc φ ψ ξ p q r (~ j) i)) s)
 
+  -- Argument by "J"
   pentagon : (φ ψ ξ χ : I) {a : A}
     (p : (i : I) → A [ ~ i ∨ φ ↦ (λ _ → a) ])
     (q : (i : I) → A [ ~ i ∨ ψ ↦ (λ _ → outS (p i1)) ])
@@ -110,6 +120,8 @@ module WithCofs where
             (λ _ → inS (outS (r k))))
         (ψ ∧ ξ)
         refl)
+
+{- Cashing out -}
 
 _⁻¹ : (x ≡ y) → (y ≡ x)
 p ⁻¹ = sym p
@@ -151,5 +163,3 @@ pentagon : (p : x ≡ y) (q : y ≡ z) (r : z ≡ w) (s : w ≡ v)
     (cong (_∙ s) (sym (assoc p q r)))
 pentagon p q r s =
   WithCofs.pentagon i0 i0 i0 i0 (λ i → inS (p i)) (λ i → inS (q i)) (λ i → inS (r i)) (λ i → inS (s i))
-
-import Cubical.Foundations.GroupoidLaws as GL
