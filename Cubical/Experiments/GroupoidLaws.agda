@@ -2,6 +2,8 @@
 
 Weird idea
 
+Proofs of groupoid laws inspired by CCHM identity types and transp
+
 -}
 {-# OPTIONS --cubical --safe #-}
 module Cubical.Experiments.GroupoidLaws where
@@ -30,13 +32,13 @@ module WithCofs where
         })
       (outS (p i))
 
-  rUnit : (φ ψ : I) {a : A} (p : (i : I) → A [ ~ i ∨ φ ↦ (λ _ → a) ])
-    → conc φ ψ p (λ _ → inS (outS (p i1))) ≡ (λ i → outS (p i))
-  rUnit φ ψ p j = conc φ (ψ ∨ j) p (λ _ → inS (outS (p i1)))
+  rUnit : (φ : I) {a : A} (p : (i : I) → A [ ~ i ∨ φ ↦ (λ _ → a) ])
+    → conc φ i0 p (λ _ → inS (outS (p i1))) ≡ (λ i → outS (p i))
+  rUnit φ p j = conc φ j p (λ _ → inS (outS (p i1)))
 
-  lUnit : (φ ψ : I) {a : A} (q : (i : I) → A [ ~ i ∨ ψ ↦ (λ _ → a) ])
-    → conc φ ψ (λ _ → inS a) q ≡ (λ i → outS (q i))
-  lUnit φ ψ q j = conc (φ ∨ j) ψ (λ _ → inS (outS (q i0))) q
+  lUnit : (ψ : I) {a : A} (q : (i : I) → A [ ~ i ∨ ψ ↦ (λ _ → a) ])
+    → conc i0 ψ (λ _ → inS a) q ≡ (λ i → outS (q i))
+  lUnit ψ q j = conc j ψ (λ _ → inS (outS (q i0))) q
 
   rCancel : (φ : I) {a : A} (p : (i : I) → A [ ~ i ∨ φ ↦ (λ _ → a) ])
     → conc φ φ p ((λ i → inS (outS (p (~ i))))) ≡ refl
@@ -58,6 +60,17 @@ module WithCofs where
     conc (φ ∧ (ψ ∨ ~ j)) ((ψ ∨ j) ∧ ξ)
       (λ i → inS (conc φ (ψ ∨ ~ j) p (λ i → inS (outS (q (i ∧ j)))) i))
       (λ i → inS (conc (ψ ∨ j) ξ (λ i → inS (outS (q (i ∨ j)))) r i) )
+
+  triangle : (φ ψ : I) {a : A}
+    (p : (i : I) → A [ ~ i ∨ φ ↦ (λ _ → a) ])
+    (q : (i : I) → A [ ~ i ∨ ψ ↦ (λ _ → outS (p i1)) ])
+    → Square
+      (assoc φ i0 ψ p (λ _ → inS (outS (p i1))) q)
+      (λ _ → conc φ ψ p q)
+      (λ j → conc φ (ψ ∧ j) p (λ i → inS (lUnit ψ q j i)))
+      (λ j → conc (φ ∧ j) ψ (λ i → inS (rUnit φ p j i)) q)
+  triangle φ ψ p q j =
+    assoc φ j ψ p (λ _ → inS (outS (p i1))) q
 
   PentagonType : (φ ψ ξ χ : I) {a : A}
     (p : (i : I) → A [ ~ i ∨ φ ↦ (λ _ → a) ])
@@ -107,10 +120,10 @@ _∙_ : x ≡ y → y ≡ z → x ≡ z
 p ∙ q = WithCofs.conc i0 i0 (λ i → inS (p i)) λ i → inS (q i)
 
 rUnit : (p : x ≡ y) → p ∙ refl ≡ p
-rUnit p = WithCofs.rUnit i0 i0 (λ i → inS (p i))
+rUnit p = WithCofs.rUnit i0 (λ i → inS (p i))
 
 lUnit : (p : x ≡ y) → refl ∙ p ≡ p
-lUnit p = WithCofs.lUnit i0 i0 (λ i → inS (p i))
+lUnit p = WithCofs.lUnit i0 (λ i → inS (p i))
 
 rCancel : (p : x ≡ y) → p ∙ p ⁻¹ ≡ refl
 rCancel {x = x} p = WithCofs.rCancel i0 (λ i → inS (p i))
@@ -122,6 +135,14 @@ assoc : (p : x ≡ y) (q : y ≡ z) (r : z ≡ w) →
   p ∙ (q ∙ r) ≡ (p ∙ q) ∙ r
 assoc p q r = WithCofs.assoc i0 i0 i0 (λ i → inS (p i)) (λ i → inS (q i)) (λ i → inS (r i))
 
+triangle : (p : x ≡ y) (q : y ≡ z)
+  → Square
+    (assoc p refl q)
+    (λ _ → p ∙ q)
+    (cong (p ∙_) (lUnit q))
+    (cong (_∙ q) (rUnit p))
+triangle p q = WithCofs.triangle i0 i0 (λ i → inS (p i)) (λ i → inS (q i))
+
 pentagon : (p : x ≡ y) (q : y ≡ z) (r : z ≡ w) (s : w ≡ v)
   → Square
     (assoc p q (r ∙ s) ∙ assoc (p ∙ q) r s)
@@ -130,3 +151,5 @@ pentagon : (p : x ≡ y) (q : y ≡ z) (r : z ≡ w) (s : w ≡ v)
     (cong (_∙ s) (sym (assoc p q r)))
 pentagon p q r s =
   WithCofs.pentagon i0 i0 i0 i0 (λ i → inS (p i)) (λ i → inS (q i)) (λ i → inS (r i)) (λ i → inS (s i))
+
+import Cubical.Foundations.GroupoidLaws as GL
