@@ -130,17 +130,11 @@ homotopyNatural {f = f} {g = g} H {x} {y} p i j =
                    ; (j = i1) → cong g p (i ∨ k) })
           (H (p i) j)
 
--- TODO: can probably be simplified using that f is the identity function
-Hfa≡fHa : ∀ (f : A → A) → (H : ∀ a → f a ≡ a) → ∀ a → H (f a) ≡ cong f (H a)
-Hfa≡fHa {A = A} f H a =
-  H (f a)                          ≡⟨ rUnit (H (f a)) ⟩
-  H (f a) ∙ refl                   ≡⟨ cong (_∙_ (H (f a))) (sym (rCancel (H a))) ⟩
-  H (f a) ∙ H a ∙ sym (H a)        ≡⟨ assoc _ _ _ ⟩
-  (H (f a) ∙ H a) ∙ sym (H a)      ≡⟨ cong (λ x →  x ∙ (sym (H a))) (homotopyNatural H (H a)) ⟩
-  (cong f (H a) ∙ H a) ∙ sym (H a) ≡⟨ sym (assoc _ _ _) ⟩
-  cong f (H a) ∙ H a ∙ sym (H a)   ≡⟨ cong (_∙_ (cong f (H a))) (rCancel _) ⟩
-  cong f (H a) ∙ refl              ≡⟨ sym (rUnit _) ⟩
-  cong f (H a) ∎
+Hfa≡fHa : ∀ {A : Type ℓ} (f : A → A) → (H : ∀ a → f a ≡ a) → ∀ a → H (f a) ≡ cong f (H a)
+Hfa≡fHa {A = A} f H =
+  J (λ f p → ∀ a → funExt⁻ (sym p) (f a) ≡ cong f (funExt⁻ (sym p) a))
+    (λ a → refl)
+    (sym (funExt H))
 
 invEq≡→equivFun≡ : ∀ (e : A ≃ B) {x y} → invEq e x ≡ y → equivFun e y ≡ x
 invEq≡→equivFun≡ e {x} p = cong (equivFun e) (sym p) ∙ retEq e x
