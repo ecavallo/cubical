@@ -13,7 +13,6 @@ private
   variable
     ℓA ℓ≅A ℓB ℓ≅B : Level
 
-{-
 record UARel1 (A : Type ℓA) (ℓ≅A : Level) : Type (ℓ-max ℓA (ℓ-suc ℓ≅A)) where
   no-eta-equality
   constructor uarel1
@@ -42,7 +41,7 @@ total1a {A = A} {ℓ≅A = ℓ≅A} {𝒮-A = 𝒮-A} {B = B} {ℓ≅B = ℓ≅B
     _≅Σ_ : Σ A B → Σ A B → Type (ℓ-max ℓ≅A ℓ≅B)
     (a , b) ≅Σ (a' , b') = a ≅ a' × b ≅ᴰ b'
     uaΣ : {r r' : Σ A B} → r ≅Σ r' → r ≡ r'
-    uaΣ {(a , b)} {(a' , b')} (p₁ , p₂) = ΣPathP (ua p₁ , {!uaᴰ!})
+    uaΣ {(a , b)} {(a' , b')} (p₁ , p₂) = ΣPathP (ua p₁ , {!!})
 
 record DUARel1b {A : Type ℓA} {ℓ≅A : Level} {𝒮-A : UARel1 A ℓ≅A}
               (B : A → Type ℓB) (ℓ≅B : Level) : Type (ℓ-max (ℓ-max ℓA ℓB) (ℓ-suc ℓ≅B)) where
@@ -65,7 +64,6 @@ total1b {A = A} {ℓ≅A = ℓ≅A} {𝒮-A = 𝒮-A} {B = B} {ℓ≅B = ℓ≅B
     (a , b) ≅Σ (a' , b') =  Σ[ p ∈ a ≅ a' ] (b ≅ᴰ⟨ ua p ⟩ b')
     uaΣ : {a a' : Σ A B} → a ≅Σ a' → a ≡ a'
     uaΣ {(a , b)} {(a' , b')} (p₁ , p₂) = ΣPathP (ua p₁ , {!!})
--}
 
 record UARel (A : Type ℓA) (ℓ≅A : Level) : Type (ℓ-max ℓA (ℓ-suc ℓ≅A)) where
   no-eta-equality
@@ -101,4 +99,4 @@ total {A = A} {ℓ≅A = ℓ≅A} {𝒮-A = 𝒮-A} {B = B} {ℓ≅B = ℓ≅B} 
     ρΣ : (r : Σ A B) → r ≅Σ r
     ρΣ (a , b) = ρ a , ρᴰ b
     uaΣ : {r r' : Σ A B} → r ≅Σ r' → r ≡ r'
-    uaΣ {r} {r'} (p₁ , p₂) = ΣPathP (ua p₁ , uaᴰ {!p₂!})
+    uaΣ {r} {r'} (p₁ , p₂) = ΣPathP (ua p₁ , uaᴰ {!!})
