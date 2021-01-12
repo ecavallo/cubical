@@ -4,6 +4,7 @@ module Cubical.Displayed.Base where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.HLevels
+open import Cubical.Foundations.Isomorphism
 
 open import Cubical.Data.Sigma
 
@@ -11,28 +12,70 @@ open import Cubical.Relation.Binary
 
 private
   variable
-    ℓA  ℓB : Level
+    ℓA ℓA' ℓB ℓB' : Level
 
+record UARel (A : Type ℓA) (ℓ≅A : Level) : Type (ℓ-max ℓA (ℓ-suc ℓ≅A)) where
+  no-eta-equality
+  constructor uarel
+  field
+    _≅_ : A → A → Type ℓ≅A
+    ρ : (a : A) → a ≅ a
+    ua : {a a' : A} → (a ≅ a') → (a ≡ a')
+
+record DUARel {A : Type ℓA} {ℓ≅A : Level} {𝒮-A : UARel A ℓ≅A}
+              (B : A → Type ℓB) (ℓ≅B : Level) : Type (ℓ-max (ℓ-max ℓA ℓB) (ℓ-max ℓ≅A (ℓ-suc ℓ≅B))) where
+  no-eta-equality
+  constructor duarel
+  open UARel 𝒮-A
+
+  field
+    _≅ᴰ⟨_⟩_ : {a a' : A} → B a → a ≅ a' → B a' → Type ℓ≅B
+    ρᴰ : {a : A} → (b : B a) → b ≅ᴰ⟨ ρ a ⟩ b
+    -- uaᴰ : {a : A} → {b b' : B a} → b ≅ᴰ⟨ ρ a ⟩ b' → b ≡ b'
+    uaᴰ : {a : A} → {b b' : B a} → b ≅ᴰ⟨ ρ a ⟩ b' → PathP (λ i → B (ua (ρ a) i)) b b'
+
+total : {A : Type ℓA} {ℓ≅A : Level} {𝒮-A : UARel A ℓ≅A}
+        {B : A → Type ℓB} {ℓ≅B : Level}
+        (𝒮ᴰ-B : DUARel B ℓ≅B)
+        → UARel (Σ A B) (ℓ-max ℓ≅A ℓ≅B)
+total {A = A} {ℓ≅A = ℓ≅A} {𝒮-A = 𝒮-A} {B = B} {ℓ≅B = ℓ≅B} 𝒮ᴰ-B =
+  uarel _≅Σ_ ρΣ uaΣ
+  where
+    open UARel 𝒮-A
+    open DUARel 𝒮ᴰ-B
+    _≅Σ_ : Σ A B → Σ A B → Type (ℓ-max ℓ≅A ℓ≅B)
+    (a , b) ≅Σ (a' , b') = Σ[ p ∈ a ≅ a' ] (b ≅ᴰ⟨ p ⟩ b')
+    ρΣ : (r : Σ A B) → r ≅Σ r
+    ρΣ (a , b) = ρ a , ρᴰ b
+    uaΣ : {r r' : Σ A B} → r ≅Σ r' → r ≡ r'
+    uaΣ {(a , b)} {(a' , b')} (pa , pb) = ΣPathP (ua pa , uaᴰ {!!})
+
+{-
+-- Base
 
 record URel (A : Type ℓA) (ℓ≅A : Level) : Type (ℓ-max ℓA (ℓ-suc ℓ≅A)) where
   no-eta-equality
   constructor urel
   field
-    _≅_ : A → A → Type ℓ≅A
+    _≅_ : Rel A A ℓ≅A
     u : {a a' : A} → (a ≅ a') → (a ≡ a')
 
-record DURel {A : Type ℓA} {ℓ≅A : Level} {RA : URel A ℓ≅A}
+record DURel {A : Type ℓA} {ℓ≅A : Level} (RA : URel A ℓ≅A)
               (B : A → Type ℓB) (ℓ≅B : Level) : Type (ℓ-max (ℓ-max ℓA ℓB) (ℓ-suc ℓ≅B)) where
   no-eta-equality
   open URel RA
 
   field
-    _D≅_ : {a a' : A} → B a → B a' → Type ℓ≅B
+    -- HERE a and a' should be related!
+    _D≅_ : {a a' : A} → Rel (B a) (B a') ℓ≅B
+    -- _D≅_ : {a a' : A} → (p : a ≅ a') →  Rel (B a) (B a') ℓ≅B
     Du : {a : A} → {b b' : B a} → b D≅ b' → b ≡ b'
+
+-- Total Spaces
 
 ∫ : {ℓA  ℓB : Level} {A : Type ℓA} {ℓ≅A : Level} {RA : URel A ℓ≅A}
     {B : A → Type ℓB} {ℓ≅B : Level}
-    (RB : DURel {RA = RA} B ℓ≅B)
+    (RB : DURel RA B ℓ≅B)
     → URel (Σ A B) (ℓ-max ℓ≅A ℓ≅B)
 URel._≅_ (∫ {RA = RA} RB) (a , b) (a' , b') = a ≅ a' × b D≅ b'
   where
@@ -50,7 +93,52 @@ URel.u (∫ {A = A} {RA = RA} {B = B} RB) (pa , pb) = ΣPathP (u pa , duaB pa pb
         T : (a' : A) → a ≡ a' → Type _
         T a' p = {b : B a} {b' : B a'} → b D≅ b' → PathP (λ i → B (p i)) b b'
 
+-- Equivalences
+
+URelIso→Iso : {A : Type ℓA} {ℓ≅A : Level} {RA : URel A ℓ≅A}
+               {B : Type ℓB} {ℓ≅B : Level} {RB : URel B ℓ≅B}
+               (f : RelIso (URel._≅_ RA) (URel._≅_ RB))
+               → Iso A B
+URelIso→Iso {RA = RA} {RB = RB} f
+  = RelIso→Iso (URel._≅_ RA) (URel._≅_ RB) (URel.u RA) (URel.u RB) f
+-}
+
+
+-- Fiberwise
 {-
+DURelIso→FiberwiseIso : {A : Type ℓA} {ℓ≅A : Level} {RA : URel A ℓ≅A}
+                    {B : A → Type ℓB} {ℓ≅B : Level} {RB : DURel RA B ℓ≅B}
+                    {B' : A → Type ℓB'} {ℓ≅B' : Level} {RB' : DURel RA B' ℓ≅B'}
+                    (g : (a : A) → RelIso (DURel._D≅_ RB) (DURel._D≅_ RB'))
+                    → (a : A) → Iso (B a) (B' a)
+DURelIso→FiberwiseIso f = {!!}
+
+DURelIso→TotalIso : {A : Type ℓA} {ℓ≅A : Level} {RA : URel A ℓ≅A}
+                    {A' : Type ℓA'} {ℓ≅A' : Level} {RA' : URel A' ℓ≅A'}
+                    {B : A → Type ℓB} {ℓ≅B : Level} {RB : DURel RA B ℓ≅B}
+                    {B' : A' → Type ℓB'} {ℓ≅B' : Level} {RB' : DURel RA' B' ℓ≅B'}
+                    (f : Iso A A')
+                    (g : (a : A) → RelIso (DURel._D≅_ RB) {!!})
+                    → Iso (Σ A B) (Σ A' B')
+DURelIso→TotalIso = {!!}
+-}
+
+
+-- Old stuff / alternatives
+
+{-
+-- Pullbacks
+
+_*_ : {A : Type ℓA}
+     → {A' : Type ℓA'}
+     → (f : A → A')
+     → (B' : A' → Type ℓB')
+     → (a : A)
+     → Type ℓB'
+f * B' = B' ∘ f
+  where
+    open import Cubical.Foundations.Function
+                    → Iso (Σ A B) (Σ A (f * B'))
 total : {A : Type ℓA} {ℓ≅A : Level} {RA : URel A ℓ≅A}
         {B : A → Type ℓB} {ℓ≅B : Level}
         (RB : DURel B ℓ≅B)
@@ -133,42 +221,6 @@ total1b {A = A} {ℓ≅A = ℓ≅A} {𝒮-A = 𝒮-A} {B = B} {ℓ≅B = ℓ≅B
     (a , b) ≅Σ (a' , b') =  Σ[ p ∈ a ≅ a' ] (b ≅ᴰ⟨ ua p ⟩ b')
     uaΣ : {a a' : Σ A B} → a ≅Σ a' → a ≡ a'
     uaΣ {(a , b)} {(a' , b')} (p₁ , p₂) = ΣPathP (ua p₁ , {!!})
-
-record UARel (A : Type ℓA) (ℓ≅A : Level) : Type (ℓ-max ℓA (ℓ-suc ℓ≅A)) where
-  no-eta-equality
-  constructor uarel
-  field
-    _≅_ : A → A → Type ℓ≅A
-    ρ : (a : A) → a ≅ a
-    ua : {a a' : A} → (a ≅ a') → (a ≡ a')
-
-record DUARel {A : Type ℓA} {ℓ≅A : Level} {𝒮-A : UARel A ℓ≅A}
-              (B : A → Type ℓB) (ℓ≅B : Level) : Type (ℓ-max (ℓ-max ℓA ℓB) (ℓ-max ℓ≅A (ℓ-suc ℓ≅B))) where
-  no-eta-equality
-  constructor duarel
-  open UARel 𝒮-A
-
-  field
-    _≅ᴰ⟨_⟩_ : {a a' : A} → B a → a ≅ a' → B a' → Type ℓ≅B
-    ρᴰ : {a : A} → (b : B a) → b ≅ᴰ⟨ ρ a ⟩ b
-    -- uaᴰ : {a : A} → {b b' : B a} → b ≅ᴰ⟨ ρ a ⟩ b' → b ≡ b'
-    uaᴰ : {a : A} → {b b' : B a} → b ≅ᴰ⟨ ρ a ⟩ b' → PathP (λ i → B (ua (ρ a) i)) b b'
-
-total : {A : Type ℓA} {ℓ≅A : Level} {𝒮-A : UARel A ℓ≅A}
-        {B : A → Type ℓB} {ℓ≅B : Level}
-        (𝒮ᴰ-B : DUARel B ℓ≅B)
-        → UARel (Σ A B) (ℓ-max ℓ≅A ℓ≅B)
-total {A = A} {ℓ≅A = ℓ≅A} {𝒮-A = 𝒮-A} {B = B} {ℓ≅B = ℓ≅B} 𝒮ᴰ-B =
-  uarel _≅Σ_ ρΣ uaΣ
-  where
-    open UARel 𝒮-A
-    open DUARel 𝒮ᴰ-B
-    _≅Σ_ : Σ A B → Σ A B → Type (ℓ-max ℓ≅A ℓ≅B)
-    (a , b) ≅Σ (a' , b') = Σ[ p ∈ a ≅ a' ] (b ≅ᴰ⟨ p ⟩ b')
-    ρΣ : (r : Σ A B) → r ≅Σ r
-    ρΣ (a , b) = ρ a , ρᴰ b
-    uaΣ : {r r' : Σ A B} → r ≅Σ r' → r ≡ r'
-    uaΣ {r} {r'} (p₁ , p₂) = ΣPathP (ua p₁ , uaᴰ {!!})
 -}
 {-
 module Total {A : Type u} {B : A → Type u'} (AR : URel A t) (BR : DURel B t') where

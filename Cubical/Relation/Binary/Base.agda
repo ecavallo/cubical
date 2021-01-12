@@ -5,9 +5,15 @@ open import Cubical.Core.Everything
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.HLevels
+open import Cubical.Foundations.Isomorphism
+open import Cubical.Foundations.Equiv
 open import Cubical.Data.Sigma
 open import Cubical.HITs.SetQuotients.Base
 open import Cubical.HITs.PropositionalTruncation.Base
+
+private
+  variable
+    ℓA ℓ≅A ℓA' ℓ≅A' : Level
 
 Rel : ∀ {ℓ} (A B : Type ℓ) (ℓ' : Level) → Type (ℓ-max ℓ (ℓ-suc ℓ'))
 Rel A B ℓ' = A → B → Type ℓ'
@@ -56,9 +62,34 @@ module BinaryRelation {ℓ ℓ' : Level} {A : Type ℓ} (R : Rel A A ℓ') where
   isEffective =
     (a b : A) → isEquiv (eq/ {R = R} a b)
 
+  impliesIdentity : Type _
+  impliesIdentity = {a a' : A} → (R a a') → (a ≡ a')
+
 EquivRel : ∀ {ℓ} (A : Type ℓ) (ℓ' : Level) → Type (ℓ-max ℓ (ℓ-suc ℓ'))
 EquivRel A ℓ' = Σ[ R ∈ Rel A A ℓ' ] BinaryRelation.isEquivRel R
 
 EquivPropRel : ∀ {ℓ} (A : Type ℓ) (ℓ' : Level) → Type (ℓ-max ℓ (ℓ-suc ℓ'))
 EquivPropRel A ℓ' = Σ[ R ∈ PropRel A A ℓ' ] BinaryRelation.isEquivRel (R .fst)
 
+record RelIso {A : Type ℓA} (_≅_ : Rel A A ℓ≅A)
+              {A' : Type ℓA'} (_≅'_ : Rel A' A' ℓ≅A') : Type (ℓ-max (ℓ-max ℓA ℓA') (ℓ-max ℓ≅A ℓ≅A')) where
+  constructor reliso
+  field
+    fun : A → A'
+    inv : A' → A
+    rightInv : (a' : A') → fun (inv a') ≅' a'
+    leftInv : (a : A) → inv (fun a) ≅ a
+
+open BinaryRelation
+
+RelIso→Iso : {A : Type ℓA} {A' : Type ℓA'}
+             (_≅_ : Rel A A ℓ≅A) (_≅'_ : Rel A' A' ℓ≅A')
+             (uni : impliesIdentity _≅_) (uni' : impliesIdentity _≅'_)
+             (f : RelIso _≅_ _≅'_)
+             → Iso A A'
+Iso.fun (RelIso→Iso _ _ _ _ f) = RelIso.fun f
+Iso.inv (RelIso→Iso _ _ _ _ f) = RelIso.inv f
+Iso.rightInv (RelIso→Iso _ _ uni uni' f) a'
+  = uni' (RelIso.rightInv f a')
+Iso.leftInv (RelIso→Iso _ _ uni uni' f) a
+  = uni (RelIso.leftInv f a)
