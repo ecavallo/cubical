@@ -7,6 +7,7 @@ open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.HLevels
 open import Cubical.Foundations.Isomorphism
 open import Cubical.Foundations.Equiv
+open import Cubical.Foundations.Equiv.Fiberwise
 open import Cubical.Data.Sigma
 open import Cubical.HITs.SetQuotients.Base
 open import Cubical.HITs.PropositionalTruncation.Base
@@ -64,6 +65,48 @@ module BinaryRelation {ℓ ℓ' : Level} {A : Type ℓ} (R : Rel A A ℓ') where
 
   impliesIdentity : Type _
   impliesIdentity = {a a' : A} → (R a a') → (a ≡ a')
+
+  -- the total space corresponding to the binary relation w.r.t. a
+  relSinglAt : (a : A) → Type (ℓ-max ℓ ℓ')
+  relSinglAt a = Σ[ a' ∈ A ] (R a a')
+
+  -- the statement that the total space is contractible at any a
+  contrRelSingl : Type (ℓ-max ℓ ℓ')
+  contrRelSingl = (a : A) → isContr (relSinglAt a)
+
+  isUnivalent : Type (ℓ-max ℓ ℓ')
+  isUnivalent = (a a' : A) → (R a a') ≃ (a ≡ a')
+
+  contrRelSingl→isUnivalent : isRefl → contrRelSingl → isUnivalent
+  contrRelSingl→isUnivalent ρ c a a' = isoToEquiv i
+    where
+      h : isProp (relSinglAt a)
+      h = isContr→isProp (c a)
+      aρa : relSinglAt a
+      aρa = a , ρ a
+      Q : (y : A) → a ≡ y → _
+      Q y _ = R a y
+      i : Iso (R a a') (a ≡ a')
+      Iso.fun i r = cong fst (h aρa (a' , r))
+      Iso.inv i = J Q (ρ a)
+      Iso.rightInv i = J (λ y p → cong fst (h aρa (y , J Q (ρ a) p)) ≡ p)
+                         (J (λ q _ → cong fst (h aρa (a , q)) ≡ refl)
+                           (J (λ α _ → cong fst α ≡ refl) refl
+                             (isContr→isProp (isProp→isContrPath h aρa aρa) refl (h aρa aρa)))
+                           (sym (JRefl Q (ρ a))))
+      Iso.leftInv i r = J (λ w β → J Q (ρ a) (cong fst β) ≡ snd w)
+                          (JRefl Q (ρ a)) (h aρa (a' , r))
+
+  isUnivalent→contrRelSingl : isUnivalent → contrRelSingl
+  isUnivalent→contrRelSingl u a = q
+    where
+      abstract
+        f : (x : A) → a ≡ x → R a x
+        f x p = invEq (u a x) p
+        t : singl a → relSinglAt a
+        t (x , p) = x , f x p
+        q = isOfHLevelRespectEquiv 0 (t , totalEquiv _ _ f λ x → invEquiv (u a x) .snd)
+                                   (isContrSingl a)
 
 EquivRel : ∀ {ℓ} (A : Type ℓ) (ℓ' : Level) → Type (ℓ-max ℓ (ℓ-suc ℓ'))
 EquivRel A ℓ' = Σ[ R ∈ Rel A A ℓ' ] BinaryRelation.isEquivRel R
