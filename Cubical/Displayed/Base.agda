@@ -108,3 +108,60 @@ DUARel._≅ᴰ⟨_⟩_ (Lift-𝒮ᴰ 𝒮-A 𝒮ᴰ-B 𝒮ᴰ-C)  b (pa , _) b' 
     open DUARel 𝒮ᴰ-B
 -- should use alternate constructor
 DUARel.uaᴰ (Lift-𝒮ᴰ 𝒮-A 𝒮ᴰ-B 𝒮ᴰ-C) = {!!}
+
+
+
+-- YET ANOTHER alternative
+
+record DUARel' {A : Type ℓA} {ℓ≅A : Level} (𝒮-A : UARel A ℓ≅A)
+              (B : A → Type ℓB) (ℓ≅B : Level) : Type (ℓ-max (ℓ-max ℓA ℓB) (ℓ-max ℓ≅A (ℓ-suc ℓ≅B))) where
+  no-eta-equality
+  constructor duarel'
+  open UARel 𝒮-A
+
+  field
+    _≅ᴰ⟨_⟩_ : {a a' : A} → B a → a ≅ a' → B a' → Type ℓ≅B
+    uaᴰ : {a : A} → (b b' : B a) → Σ[ p ∈ a ≅ a ] ((b ≅ᴰ⟨ p ⟩ b') ≃ (b ≡ b'))
+  ρᴰ : {a : A} → (b : B a) → Σ[ p ∈ a ≅ a ] b ≅ᴰ⟨ p ⟩ b
+  ρᴰ {a} b = p , invEq (snd (uaᴰ b b)) refl
+    where
+      p : a ≅ a
+      p = fst (uaᴰ b b)
+
+
+make-𝒮ᴰ' : {A : Type ℓA} {𝒮-A : UARel A ℓ≅A}
+           {B : A → Type ℓB}
+           (_≅ᴰ⟨_⟩_ : {a a' : A} → B a → UARel._≅_ 𝒮-A a a' → B a' → Type ℓ≅B)
+           (uaᴰ : {a : A} → (b b' : B a) → (b ≅ᴰ⟨ UARel.ρ 𝒮-A a ⟩ b') ≃ (b ≡ b'))
+          → DUARel' 𝒮-A B ℓ≅B
+make-𝒮ᴰ' {𝒮-A = 𝒮-A} _≅ᴰ⟨_⟩_ uaᴰ =  duarel' _≅ᴰ⟨_⟩_ (λ {a} b b' → UARel.ρ 𝒮-A a , uaᴰ b b')
+
+-- temporary:
+make-𝒮ᴰ'' : {A : Type ℓA} {𝒮-A : UARel A ℓ≅A}
+          {B : A → Type ℓB}
+          {ℓ≅B : Level}
+          (_≅ᴰ⟨_⟩_ : {a a' : A} → B a → UARel._≅_ 𝒮-A a a' → B a' → Type ℓ≅B)
+          (ρᴰ : {a : A} → isRefl _≅ᴰ⟨ UARel.ρ 𝒮-A a ⟩_)
+          (contrTotal : (a : A) → contrRelSingl _≅ᴰ⟨ UARel.ρ 𝒮-A a ⟩_)
+          → DUARel' 𝒮-A B ℓ≅B
+make-𝒮ᴰ'' {𝒮-A = 𝒮-A} {B = B} {ℓ≅B = ℓ≅B} _≅ᴰ⟨_⟩_ ρᴰ contrTotal = make-𝒮ᴰ' _≅ᴰ⟨_⟩_ (DUARel.uaᴰ DUA)
+  where
+  DUA : DUARel 𝒮-A B ℓ≅B
+  DUA = make-𝒮ᴰ _≅ᴰ⟨_⟩_ ρᴰ contrTotal
+{-
+make-𝒮ᴰ' : {A : Type ℓA} {𝒮-A : UARel A ℓ≅A}
+          {B : A → Type ℓB}
+          (_≅ᴰ⟨_⟩_ : {a a' : A} → B a → UARel._≅_ 𝒮-A a a' → B a' → Type ℓ≅B)
+          (ρᴰ : {a : A} → isRefl _≅ᴰ⟨ UARel.ρ 𝒮-A a ⟩_)
+          (contrTotal : (a : A) → contrRelSingl _≅ᴰ⟨ UARel.ρ 𝒮-A a ⟩_)
+          → DUARel' 𝒮-A B ℓ≅B
+make-𝒮ᴰ' {A = A} {𝒮-A = 𝒮-A} {B = B} _≅ᴰ⟨_⟩_  ρᴰ contrTotal
+  = duarel' _≅ᴰ⟨_⟩_ uni
+  where
+    open UARel 𝒮-A
+    uni : {a : A} (b b' : B a) → Σ[ p ∈ a ≅ a ] (b ≅ᴰ⟨ p ⟩ b') ≃ (b ≡ b')
+    uni {a} b b' = p , e
+      where
+        p = ρ a
+        e = {!ρᴰ!}
+-}
