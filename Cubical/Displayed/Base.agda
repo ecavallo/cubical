@@ -129,7 +129,6 @@ Lift-𝒮ᴰ {A = A} 𝒮-A {B} {ℓ≅B} 𝒮ᴰ-B {C} 𝒮ᴰ-C
     _≅'⟨_⟩_ : {(a , c) (a' , c') : Σ A C} → B a → Σ[ p ∈ a ≅ a' ] (c ≅C⟨ p ⟩ c') → B a' → Type ℓ≅B
     b ≅'⟨ p , q ⟩ b' = b ≅B⟨ p ⟩ b'
     r : {(a , c) : Σ A C} → (b : B a) → b ≅'⟨ ρ∫ (a , c) ⟩ b
-    -- r : {(a , c) : Σ A C} → (b : B a) → b ≅B⟨ fst (invEq (ua∫ (a , c) (a , c)) refl) ⟩ b
     r {(a , c)} b = subst (λ q → b ≅'⟨ q ⟩ b)
                           (sym (transportRefl (ρA a , ρC c)))
                           (ρB b)
@@ -153,165 +152,44 @@ Lift-𝒮ᴰ {A = A} 𝒮-A {B} {ℓ≅B} 𝒮ᴰ-B {C} 𝒮ᴰ-C
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-{-
--- YET ANOTHER alternative
-
-record DUARel' {A : Type ℓA} {ℓ≅A : Level} (𝒮-A : UARel A ℓ≅A)
-              (B : A → Type ℓB) (ℓ≅B : Level) : Type (ℓ-max (ℓ-max ℓA ℓB) (ℓ-max ℓ≅A (ℓ-suc ℓ≅B))) where
-  no-eta-equality
-  constructor duarel'
-  open UARel 𝒮-A
-
-  field
-    _≅ᴰ⟨_⟩_ : {a a' : A} → B a → a ≅ a' → B a' → Type ℓ≅B
-    uaᴰ : {a : A} → (b b' : B a) → Σ[ p ∈ a ≅ a ] ((b ≅ᴰ⟨ p ⟩ b') ≃ (b ≡ b'))
-  ρᴰ : {a : A} → (b : B a) → Σ[ p ∈ a ≅ a ] b ≅ᴰ⟨ p ⟩ b
-  ρᴰ {a} b = p , invEq (snd (uaᴰ b b)) refl
-    where
-      p : a ≅ a
-      p = fst (uaᴰ b b)
-
-
-make-𝒮ᴰ' : {A : Type ℓA} {𝒮-A : UARel A ℓ≅A}
-           {B : A → Type ℓB}
-           (_≅ᴰ⟨_⟩_ : {a a' : A} → B a → UARel._≅_ 𝒮-A a a' → B a' → Type ℓ≅B)
-           (uaᴰ : {a : A} → (b b' : B a) → (b ≅ᴰ⟨ UARel.ρ 𝒮-A a ⟩ b') ≃ (b ≡ b'))
-          → DUARel' 𝒮-A B ℓ≅B
-make-𝒮ᴰ' {𝒮-A = 𝒮-A} _≅ᴰ⟨_⟩_ uaᴰ =  duarel' _≅ᴰ⟨_⟩_ (λ {a} b b' → UARel.ρ 𝒮-A a , uaᴰ b b')
-
--- temporary:
-make-𝒮ᴰ'' : {A : Type ℓA} {𝒮-A : UARel A ℓ≅A}
-          {B : A → Type ℓB}
-          {ℓ≅B : Level}
-          (_≅ᴰ⟨_⟩_ : {a a' : A} → B a → UARel._≅_ 𝒮-A a a' → B a' → Type ℓ≅B)
-          (ρᴰ : {a : A} → isRefl _≅ᴰ⟨ UARel.ρ 𝒮-A a ⟩_)
-          (contrTotal : (a : A) → contrRelSingl _≅ᴰ⟨ UARel.ρ 𝒮-A a ⟩_)
-          → DUARel' 𝒮-A B ℓ≅B
-make-𝒮ᴰ'' {𝒮-A = 𝒮-A} {B = B} {ℓ≅B = ℓ≅B} _≅ᴰ⟨_⟩_ ρᴰ contrTotal = make-𝒮ᴰ' _≅ᴰ⟨_⟩_ (DUARel.uaᴰ DUA)
+splitTotal-𝒮ᴰ : {A : Type ℓA} (𝒮-A : UARel A ℓ≅A)
+                {B : A → Type ℓB} {ℓ≅B : Level} (𝒮ᴰ-B : DUARel 𝒮-A B ℓ≅B)
+                {C : Σ A B → Type ℓC} {ℓ≅C : Level} (𝒮ᴰ-C : DUARel (∫ 𝒮ᴰ-B) C ℓ≅C)
+                → DUARel 𝒮-A
+                         (λ a → Σ[ b ∈ B a ] C (a , b))
+                         (ℓ-max ℓ≅B ℓ≅C)
+splitTotal-𝒮ᴰ {A = A} 𝒮-A {B} {ℓ≅B} 𝒮ᴰ-B {C} {ℓ≅C} 𝒮ᴰ-C
+  = make-𝒮ᴰ _≅S⟨_⟩_ r cont
   where
-  DUA : DUARel 𝒮-A B ℓ≅B
-  DUA = make-𝒮ᴰ _≅ᴰ⟨_⟩_ ρᴰ contrTotal
-{-
-private
-  total' : {A : Type ℓA} {ℓ≅A : Level} {𝒮-A : UARel A ℓ≅A}
-          {B : A → Type ℓB} {ℓ≅B : Level}
-          (𝒮ᴰ-B : DUARel' 𝒮-A B ℓ≅B)
-          → UARel (Σ A B) (ℓ-max ℓ≅A ℓ≅B)
-  total' {A = A} {ℓ≅A = ℓ≅A} {𝒮-A = 𝒮-A} {B = B} {ℓ≅B = ℓ≅B} 𝒮ᴰ-B =
-    make-𝒮 ρΣ c
-    where
-      open UARel 𝒮-A
-      open DUARel' 𝒮ᴰ-B
-      _≅Σ_ : Σ A B → Σ A B → Type (ℓ-max ℓ≅A ℓ≅B)
-      (a , b) ≅Σ (a' , b') = Σ[ p ∈ a ≅ a' ] (b ≅ᴰ⟨ p ⟩ b')
-      ρΣ : isRefl _≅Σ_
-      ρΣ (a , b) = ρᴰ b
-      c : contrRelSingl _≅Σ_
-      c (a , b) = cab , h
-        where
-          -- cab : relSinglAt _≅Σ_ (a , b)
-          cab : Σ[ (a' , b') ∈ Σ A B ] (a , b) ≅Σ (a' , b')
-          cab = (a , b) , ρΣ (a , b)
-          hB : contrRelSingl (λ b b' → b ≅ᴰ⟨ ρ a ⟩ b')
-          hB = {!!}
-          g : (b' : B a) (q : b ≅ᴰ⟨ ρ a ⟩ b') → cab ≡ ((a , b') , ρ a , q)
-          g b' q = J (λ w _ → cab ≡ ((a , fst w) , ρ a , snd w))
-                     {!!}
-                     (isContr→isProp (hB b) (b , snd (ρᴰ b)) (b' , q))
-          hA : contrRelSingl _≅_
-          hA = {!!}
-          k : (a' : A) (p : a ≅ a') (b' : B a') (q : b ≅ᴰ⟨ p ⟩ b') → cab ≡ ((a' , b') , (p , q))
-          k a' p = J (λ w _ → (b' : B (fst w)) (q : b ≅ᴰ⟨ snd w ⟩ b') → cab ≡ ((fst w , b') , (snd w , q)))
-                     g
-                     (isContr→isProp (hA a) (a , ρ a) (a' , p))
-          h : (y : Σ[ (a' , b') ∈ Σ A B ] (a , b) ≅Σ (a' , b')) → cab ≡ y
-          h ((a' , b') , p , q) = k a' p b' q
--}
-record DURel {A : Type ℓA} {ℓ≅A : Level} (𝒮-A : UARel A ℓ≅A)
-              (B : A → Type ℓB) (ℓ≅B : Level) : Type (ℓ-max (ℓ-max ℓA ℓB) (ℓ-max ℓ≅A (ℓ-suc ℓ≅B))) where
-  no-eta-equality
-  constructor durel
-  open UARel 𝒮-A
+    open UARel 𝒮-A renaming (ρ to ρA)
+    open DUARel 𝒮ᴰ-B renaming (_≅ᴰ⟨_⟩_ to _≅B⟨_⟩_ ; uaᴰ to uaB ; ρᴰ to ρB)
+    open DUARel 𝒮ᴰ-C renaming (_≅ᴰ⟨_⟩_ to _≅C⟨_⟩_ ; uaᴰ to uaC ; ρᴰ to ρC)
+    _≅S⟨_⟩_ : {a a' : A}
+              → ((b , c) : Σ[ b ∈ B a ] C (a , b))
+              → (p : a ≅ a')
+              → ((b' , c') : Σ[ b' ∈ B a' ] C (a' , b'))
+              → Type (ℓ-max ℓ≅B ℓ≅C)
+    (b , c) ≅S⟨ p ⟩ (b' , c') = Σ[ q ∈ b ≅B⟨ p ⟩ b' ] c ≅C⟨ p , q ⟩ c'
+    r : {a : A} →  isRefl (λ section₁ → _≅S⟨_⟩_ section₁ (ρA a))
+    r {a} (b , c) .fst = ρB b
+    r {a} (b , c) .snd = subst (λ q → c ≅C⟨ q ⟩ c)
+                               (transportRefl (ρA a , ρB b))
+                               (ρC c)
+    -- cont : (a : A) → contrRelSingl (λ bc → _≅S⟨_⟩_ bc (ρA a))
+    cont : (a : A) → ((b , c) : Σ[ b ∈ B a ] C (a , b)) → isContr (Σ[ bc' ∈ (Σ[ b' ∈ B a ] C (a , b')) ] ((b , c) ≅S⟨ ρA a ⟩ bc'))
+    cont a (b , c) = center , k
+      where
+        center : Σ[ bc' ∈ (Σ[ b' ∈ B a ] C (a , b')) ] ((b , c) ≅S⟨ ρA a ⟩ bc')
+        center = (b , c) , r (b , c)
+        conSingl : contrRelSingl (λ _ bc' → (b , c) ≅S⟨ ρA a ⟩ bc')
+        conSingl = isUnivalent→contrRelSingl _ {!!}
+        h : (b' : B a) (c' : C (a , b')) (q : ((b , c) ≅S⟨ ρA a ⟩ (b' , c'))) → center ≡ ((b' , c') , q)
+        h b' c' q = J (λ w _ → center ≡ w)
+                      refl
+                      (isContr→isProp (conSingl (b' , c')) center ((b' , c') , q))
+        k : (w : Σ[ bc' ∈ (Σ[ b' ∈ B a ] C (a , b')) ] ((b , c) ≅S⟨ ρA a ⟩ bc')) → center ≡ w
+        k ((b' , c') , q) = h b' c' q
 
-  field
-    _≅ᴰ⟨_⟩_ : {a a' : A} → B a → a ≅ a' → B a' → Type ℓ≅B
-    uaᴰ : {a : A} → (p : a ≅ a) → (b b' : B a) → (b ≅ᴰ⟨ p ⟩ b') ≃ (b ≡ b')
-  ρᴰ : {a : A} → (p : a ≅ a) (b : B a) → b ≅ᴰ⟨ p ⟩ b
-  ρᴰ {a} p b = invEq (uaᴰ p b b) refl
 
-make-𝒮ᴰ2 : {A : Type ℓA} {𝒮-A : UARel A ℓ≅A}
-          {B : A → Type ℓB}
-          (_≅ᴰ⟨_⟩_ : {a a' : A} → B a → UARel._≅_ 𝒮-A a a' → B a' → Type ℓ≅B)
-          (ρᴰ : {a : A} → (p : UARel._≅_ 𝒮-A a a) → isRefl _≅ᴰ⟨ p ⟩_)
-          (contrTotal : (a : A) → (p : UARel._≅_ 𝒮-A a a) → contrRelSingl _≅ᴰ⟨ p ⟩_)
-          → DURel 𝒮-A B ℓ≅B
-DURel._≅ᴰ⟨_⟩_ (make-𝒮ᴰ2 _≅ᴰ⟨_⟩_ ρᴰ contrTotal) = _≅ᴰ⟨_⟩_
-DURel.uaᴰ (make-𝒮ᴰ2 {𝒮-A = 𝒮-A} _≅ᴰ⟨_⟩_ ρᴰ contrTotal) {a} p b b'
-  = contrRelSingl→isUnivalent (_≅ᴰ⟨ p ⟩_) (ρᴰ p) (contrTotal a p) b b'
 
-private
-  total' : {A : Type ℓA} {ℓ≅A : Level} {𝒮-A : UARel A ℓ≅A}
-          {B : A → Type ℓB} {ℓ≅B : Level}
-          (𝒮ᴰ-B : DURel 𝒮-A B ℓ≅B)
-          → UARel (Σ A B) (ℓ-max ℓ≅A ℓ≅B)
-  total' {A = A} {ℓ≅A = ℓ≅A} {𝒮-A = 𝒮-A} {B = B} {ℓ≅B = ℓ≅B} 𝒮ᴰ-B
-    = make-𝒮 {_≅_ = _≅Σ_} ρΣ c
-    where
-      open UARel 𝒮-A
-      open DURel 𝒮ᴰ-B
-      _≅Σ_ : Σ A B → Σ A B → Type (ℓ-max ℓ≅A ℓ≅B)
-      (a , b) ≅Σ (a' , b') = Σ[ p ∈ a ≅ a' ] (b ≅ᴰ⟨ p ⟩ b')
-      ρΣ : isRefl _≅Σ_
-      ρΣ (a , b) = ρ a , ρᴰ (ρ a) b
-      c : contrRelSingl _≅Σ_
-      c (a , b) = cab , h
-        where
-          cab : Σ[ (a' , b') ∈ Σ A B ] (a , b) ≅Σ (a' , b')
-          cab = (a , b) , ρΣ (a , b)
-          hA : contrRelSingl _≅_
-          hA = isUnivalent→contrRelSingl _≅_ ua
-          hB : contrRelSingl (λ b b' → b ≅ᴰ⟨ ρ a ⟩ b')
-          hB = isUnivalent→contrRelSingl (λ b b' → b ≅ᴰ⟨ ρ a ⟩ b') (uaᴰ (ρ a))
-          g : (b' : B a) (q : b ≅ᴰ⟨ ρ a ⟩ b') → cab ≡ ((a , b') , ρ a , q)
-          g b' q = J (λ w _ → cab ≡ ((a , fst w) , ρ a , snd w))
-                     refl (isContr→isProp (hB b) (b , ρᴰ (ρ a) b) (b' , q))
-          k : (a' : A) (p : a ≅ a') (b' : B a') (q : b ≅ᴰ⟨ p ⟩ b') → cab ≡ ((a' , b') , (p , q))
-          k a' p = J (λ w _ → (b' : B (fst w)) (q : b ≅ᴰ⟨ snd w ⟩ b') → cab ≡ ((fst w , b') , (snd w , q)))
-                     g (isContr→isProp (hA a) (a , ρ a) (a' , p))
-          h : (y : Σ[ (a' , b') ∈ Σ A B ] (a , b) ≅Σ (a' , b')) → cab ≡ y
-          h ((a' , b') , p , q) = k a' p b' q
 
-∫' : {A : Type ℓA} {ℓ≅A : Level} {𝒮-A : UARel A ℓ≅A}
-        {B : A → Type ℓB} {ℓ≅B : Level}
-        (𝒮ᴰ-B : DURel 𝒮-A B ℓ≅B)
-        → UARel (Σ A B) (ℓ-max ℓ≅A ℓ≅B)
-UARel._≅_ (∫' 𝒮ᴰ-B) = UARel._≅_ (total' 𝒮ᴰ-B)
-UARel.ua (∫' 𝒮ᴰ-B) = UARel.ua (total' 𝒮ᴰ-B)
-
-Lift-𝒮ᴰ : {A : Type ℓA} (𝒮-A : UARel A ℓ≅A)
-        {B : A → Type ℓB}
-        {ℓ≅B : Level}
-        (𝒮ᴰ-B : DURel 𝒮-A B ℓ≅B)
-        {C : A → Type ℓC}
-        (𝒮ᴰ-C : DURel 𝒮-A C ℓ≅C)
-        → DURel (∫' 𝒮ᴰ-C) (λ (a , _) → B a) ℓ≅B
-Lift-𝒮ᴰ {A = A} 𝒮-A {B} {ℓ≅B} 𝒮ᴰ-B {C} 𝒮ᴰ-C
-  = {!!}
--}
