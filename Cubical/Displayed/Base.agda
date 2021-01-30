@@ -111,7 +111,6 @@ module _ {A : Type ℓA} {ℓ≅A : Level} (𝒮-A : UARel A ℓ≅A) where
         d
         (≅→≡ p)
 
-
 Lift-𝒮ᴰ : {A : Type ℓA} (𝒮-A : UARel A ℓ≅A)
         {B : A → Type ℓB}
         {ℓ≅B : Level}
@@ -165,31 +164,34 @@ splitTotal-𝒮ᴰ {A = A} 𝒮-A {B} {ℓ≅B} 𝒮ᴰ-B {C} {ℓ≅C} 𝒮ᴰ-
     open DUARel 𝒮ᴰ-B renaming (_≅ᴰ⟨_⟩_ to _≅B⟨_⟩_ ; uaᴰ to uaB ; ρᴰ to ρB)
     open DUARel 𝒮ᴰ-C renaming (_≅ᴰ⟨_⟩_ to _≅C⟨_⟩_ ; uaᴰ to uaC ; ρᴰ to ρC)
     _≅S⟨_⟩_ : {a a' : A}
-              → ((b , c) : Σ[ b ∈ B a ] C (a , b))
+              → (w : Σ[ b ∈ B a ] C (a , b))
               → (p : a ≅ a')
-              → ((b' , c') : Σ[ b' ∈ B a' ] C (a' , b'))
+              → (w' : Σ[ b' ∈ B a' ] C (a' , b'))
               → Type (ℓ-max ℓ≅B ℓ≅C)
     (b , c) ≅S⟨ p ⟩ (b' , c') = Σ[ q ∈ b ≅B⟨ p ⟩ b' ] c ≅C⟨ p , q ⟩ c'
-    r : {a : A} →  isRefl (λ section₁ → _≅S⟨_⟩_ section₁ (ρA a))
+    ρAB : (z : Σ A B) → Σ[ p ∈ (z .fst) ≅ (z .fst)] ((z .snd) ≅B⟨ p ⟩ (z .snd))
+    ρAB z = UARel.ρ (∫ 𝒮ᴰ-B) z
+    ρABeq : (a : A) (b : B a) → ρAB (a , b) ≡ (ρA a , ρB b)
+    ρABeq a b = transportRefl (ρA a , ρB b)
+    ρC' : {a : A} {b : B a} (c : C (a , b)) → c ≅C⟨ ρA a , ρB b ⟩ c
+    ρC' {a} {b} c = subst (λ q → c ≅C⟨ q ⟩ c) (ρABeq a b) (ρC c)
+    r : {a : A} →  isRefl (λ z → _≅S⟨_⟩_ z (ρA a))
     r {a} (b , c) .fst = ρB b
-    r {a} (b , c) .snd = subst (λ q → c ≅C⟨ q ⟩ c)
-                               (transportRefl (ρA a , ρB b))
-                               (ρC c)
+    r {a} (b , c) .snd = ρC' c
+    hB : (a : A) → contrRelSingl λ b b' → b ≅B⟨ ρA a ⟩ b'
+    hB a = isUnivalent→contrRelSingl _ uaB
+    hC : (a : A) (b : B a) → contrRelSingl λ c c' → c ≅C⟨ ρA a , ρB b ⟩ c'
+    hC a b = subst (λ q → contrRelSingl λ c c' → c ≅C⟨ q ⟩ c')
+                   (ρABeq a b) (isUnivalent→contrRelSingl _ uaC)
     -- cont : (a : A) → contrRelSingl (λ bc → _≅S⟨_⟩_ bc (ρA a))
-    cont : (a : A) → ((b , c) : Σ[ b ∈ B a ] C (a , b)) → isContr (Σ[ bc' ∈ (Σ[ b' ∈ B a ] C (a , b')) ] ((b , c) ≅S⟨ ρA a ⟩ bc'))
+    cont : (a : A) → (bc : Σ[ b ∈ B a ] C (a , b)) → isContr (Σ[ bc' ∈ (Σ[ b' ∈ B a ] C (a , b')) ] (bc ≅S⟨ ρA a ⟩ bc'))
     cont a (b , c) = center , k
       where
         center : Σ[ bc' ∈ (Σ[ b' ∈ B a ] C (a , b')) ] ((b , c) ≅S⟨ ρA a ⟩ bc')
-        center = (b , c) , r (b , c)
-        conSingl : contrRelSingl (λ _ bc' → (b , c) ≅S⟨ ρA a ⟩ bc')
-        conSingl = isUnivalent→contrRelSingl _ {!!}
-        h : (b' : B a) (c' : C (a , b')) (q : ((b , c) ≅S⟨ ρA a ⟩ (b' , c'))) → center ≡ ((b' , c') , q)
-        h b' c' q = J (λ w _ → center ≡ w)
-                      refl
-                      (isContr→isProp (conSingl (b' , c')) center ((b' , c') , q))
+        center = (b , c) , ρB b , ρC' c
         k : (w : Σ[ bc' ∈ (Σ[ b' ∈ B a ] C (a , b')) ] ((b , c) ≅S⟨ ρA a ⟩ bc')) → center ≡ w
-        k ((b' , c') , q) = h b' c' q
-
-
-
-
+        k ((b' , c') , p , q') = J (λ w _ → (c'' : C (a , w .fst)) (q'' : c ≅C⟨ ρA a , w .snd ⟩  c'')
+                                                 → center ≡ ((w .fst , c'') , w .snd , q''))
+                                   (λ c'' q'' → J (λ w _ → center ≡ ((b , w .fst) , ρB b , w .snd))
+                                      refl (isContr→isProp (hC a b c) (c , ρC' c) (c'' , q'')))
+                                   (isContr→isProp (hB a b) (b , ρB b) (b' , p)) c' q'
