@@ -195,3 +195,15 @@ splitTotal-𝒮ᴰ {A = A} 𝒮-A {B} {ℓ≅B} 𝒮ᴰ-B {C} {ℓ≅C} 𝒮ᴰ-
                                    (λ c'' q'' → J (λ w _ → center ≡ ((b , w .fst) , ρB b , w .snd))
                                       refl (isContr→isProp (hC a b c) (c , ρC' c) (c'' , q'')))
                                    (isContr→isProp (hB a b) (b , ρB b) (b' , p)) c' q'
+
+
+UARelIso→Iso : {A : Type ℓA} (𝒮-A : UARel A ℓ≅A)
+               {B : Type ℓB} (𝒮-B : UARel B ℓ≅B)
+               (F : RelIso (UARel._≅_ 𝒮-A) (UARel._≅_ 𝒮-B))
+               → Iso A B
+UARelIso→Iso 𝒮-A 𝒮-B F
+  = RelIso→Iso (UARel._≅_ 𝒮-A)
+               (UARel._≅_ 𝒮-B)
+               (UARel.≅→≡ 𝒮-A)
+               (UARel.≅→≡ 𝒮-B)
+               F
