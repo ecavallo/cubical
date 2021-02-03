@@ -6,6 +6,7 @@ open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.HLevels
 open import Cubical.Foundations.Isomorphism
 open import Cubical.Foundations.Equiv
+open import Cubical.Foundations.Transport
 
 open import Cubical.Functions.FunExtEquiv
 
@@ -46,17 +47,25 @@ record DUARel {A : Type ℓA} {ℓ≅A : Level} (𝒮-A : UARel A ℓ≅A)
 
   field
     _≅ᴰ⟨_⟩_ : {a a' : A} → B a → a ≅ a' → B a' → Type ℓ≅B
-    uaᴰ : {a : A} → (b b' : B a) → (b ≅ᴰ⟨ ρ a ⟩ b') ≃ (b ≡ b')
-  ρᴰ : {a : A} → (b : B a) → b ≅ᴰ⟨ ρ a ⟩ b
-  ρᴰ {a} b = invEq (uaᴰ b b) refl
+    uaᴰ : {a a' : A} (b : B a) (p : a ≅ a') (b' : B a') → (b ≅ᴰ⟨ p ⟩ b') ≃ PathP (λ i → B (≅→≡ p i)) b b'
 
-make-𝒮ᴰ : {A : Type ℓA} {𝒮-A : UARel A ℓ≅A}
-          {B : A → Type ℓB}
-          (_≅ᴰ⟨_⟩_ : {a a' : A} → B a → UARel._≅_ 𝒮-A a a' → B a' → Type ℓ≅B)
-          (ρᴰ : {a : A} → isRefl _≅ᴰ⟨ UARel.ρ 𝒮-A a ⟩_)
-          (contrTotal : (a : A) → contrRelSingl _≅ᴰ⟨ UARel.ρ 𝒮-A a ⟩_)
-          → DUARel 𝒮-A B ℓ≅B
-DUARel._≅ᴰ⟨_⟩_ (make-𝒮ᴰ _≅ᴰ⟨_⟩_ ρᴰ contrTotal) = _≅ᴰ⟨_⟩_
-DUARel.uaᴰ (make-𝒮ᴰ {𝒮-A = 𝒮-A} _≅ᴰ⟨_⟩_ ρᴰ contrTotal) {a} b b'
-  = contrRelSingl→isUnivalent (_≅ᴰ⟨ UARel.ρ 𝒮-A a ⟩_) (ρᴰ {a}) (contrTotal a) b b'
+  uaᴰρ : {a : A} (b b' : B a) → b ≅ᴰ⟨ ρ a ⟩ b' ≃ (b ≡ b')
+  uaᴰρ {a} b b' =
+    compEquiv
+      (uaᴰ b (ρ _) b')
+      (substEquiv (λ q → PathP (λ i → B (q i)) b b') (retEq (ua a a) refl))
+
+  ρᴰ : {a : A} → (b : B a) → b ≅ᴰ⟨ ρ a ⟩ b
+  ρᴰ {a} b = invEq (uaᴰρ b b) refl
+
+-- Not sure if useful for this definition
+-- make-𝒮ᴰ : {A : Type ℓA} {𝒮-A : UARel A ℓ≅A}
+--           {B : A → Type ℓB}
+--           (_≅ᴰ⟨_⟩_ : {a a' : A} → B a → UARel._≅_ 𝒮-A a a' → B a' → Type ℓ≅B)
+--           (ρᴰ : {a : A} → isRefl _≅ᴰ⟨ UARel.ρ 𝒮-A a ⟩_)
+--           (contrTotal : (a : A) → contrRelSingl _≅ᴰ⟨ UARel.ρ 𝒮-A a ⟩_)
+--           → DUARel 𝒮-A B ℓ≅B
+-- DUARel._≅ᴰ⟨_⟩_ (make-𝒮ᴰ _≅ᴰ⟨_⟩_ ρᴰ contrTotal) = _≅ᴰ⟨_⟩_
+-- DUARel.uaᴰ (make-𝒮ᴰ {𝒮-A = 𝒮-A} _≅ᴰ⟨_⟩_ ρᴰ contrTotal) {a} b b'
+--   = contrRelSingl→isUnivalent (_≅ᴰ⟨ UARel.ρ 𝒮-A a ⟩_) (ρᴰ {a}) (contrTotal a) b b'
 
