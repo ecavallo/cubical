@@ -184,20 +184,38 @@ module SetElim (Bset : isSet B) where
 
 open SetElim public using (rec→Set; trunc→Set≃)
 
-elim→Set
-  : {P : ∥ A ∥ → Type ℓ}
-  → (∀ t → isSet (P t))
-  → (f : (x : A) → P ∣ x ∣)
-  → (kf : ∀ x y → PathP (λ i → P (squash ∣ x ∣ ∣ y ∣ i)) (f x) (f y))
-  → (t : ∥ A ∥) → P t
-elim→Set {A = A} {P = P} Pset f kf t
-  = rec→Set (Pset t) g gk t
-  where
-  g : A → P t
-  g x = transp (λ i → P (squash ∣ x ∣ t i)) i0 (f x)
+module SetElim' {P : ∥ A ∥ → Type ℓ} (Pset : ∀ t → isSet (P t)) where
 
-  gk : 2-Constant g
-  gk x y i = transp (λ j → P (squash (squash ∣ x ∣ ∣ y ∣ i) t j)) i0 (kf x y i)
+  elim→Set : (f : (x : A) → P ∣ x ∣)
+    (kf : ∀ x y → PathP (λ i → P (squash ∣ x ∣ ∣ y ∣ i)) (f x) (f y))
+    (t : ∥ A ∥) → P t
+
+  helper : (f : (x : A) → P ∣ x ∣)
+    (kf : ∀ x y → PathP (λ i → P (squash ∣ x ∣ ∣ y ∣ i)) (f x) (f y))
+    (t u : ∥ A ∥) → PathP (λ i → P (squash t u i)) (elim→Set f kf t) (elim→Set f kf u)
+
+  elim→Set f kf ∣ x ∣ = f x
+  elim→Set f kf (squash t u i) = helper f kf t u i
+
+  helper f kf ∣ x ∣ ∣ y ∣ = kf x y
+  helper f kf (squash t u i) v =
+    isSet→SquareP
+      (λ i j → Pset (squash (squash t u i) v j))
+      (helper f kf t v)
+      (helper f kf u v)
+      (helper f kf t u)
+      (λ _ → elim→Set f kf v)
+      i
+  helper f kf ∣ x ∣ (squash u v i) =
+    isSet→SquareP
+      (λ i j → Pset (squash ∣ x ∣ (squash u v i) j))
+      (helper f kf ∣ x ∣ u)
+      (helper f kf ∣ x ∣ v)
+      (λ _ → f x)
+      (helper f kf u v)
+      i
+
+open SetElim' public using (elim→Set)
 
 RecHProp : (P : A → hProp ℓ) (kP : ∀ x y → P x ≡ P y) → ∥ A ∥ → hProp ℓ
 RecHProp P kP = rec→Set isSetHProp P kP
