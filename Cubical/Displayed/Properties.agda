@@ -141,11 +141,3 @@ module _ {A : Type ℓA} {𝒮-A : UARel A ℓ≅A}
     -- from a relational isomorphism between B a and (F * B) a
     𝒮ᴰ-fiberIsoOver→totalIso : Iso (Σ A B) (Σ A' B')
     𝒮ᴰ-fiberIsoOver→totalIso = Σ-cong-iso F fiberIsoOver
-
-
--- Special cases:
--- UARel for an arbitrary type
-
-𝒮-type : (A : Type ℓ) → UARel A ℓ
-UARel._≅_ (𝒮-type A) = _≡_
-UARel.ua (𝒮-type A) a a' = idEquiv (a ≡ a')
