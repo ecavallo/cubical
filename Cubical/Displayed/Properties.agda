@@ -8,15 +8,12 @@ open import Cubical.Foundations.Equiv
 open import Cubical.Foundations.Univalence using (pathToEquiv)
 
 open import Cubical.Data.Unit
-open import Cubical.Data.Nat
 open import Cubical.Data.Sigma
 
 open import Cubical.Relation.Binary
 open BinaryRelation
 
 open import Cubical.Displayed.Base
-open import Cubical.Displayed.Constant
-open import Cubical.Displayed.Sigma
 
 private
   variable
@@ -147,13 +144,8 @@ module _ {A : Type ℓA} {𝒮-A : UARel A ℓ≅A}
 
 
 -- Special cases:
--- Subtypes
+-- UARel for an arbitrary type
 
-module _ {A : Type ℓA} (𝒮-A : UARel A ℓ≅A) where
-  𝒮ᴰ-subtype : (P : A → hProp ℓP) → DUARel 𝒮-A (λ a → P a .fst) ℓ-zero
-  𝒮ᴰ-subtype P
-    = 𝒮ᴰ-make-2 (λ _ _ _ → Unit)
-                (λ _ → tt)
-                λ a p → isOfHLevelRespectEquiv 0
-                                               (invEquiv (Σ-contractSnd (λ _ → isContrUnit)))
-                                               (inhProp→isContr p (P a .snd))
+𝒮-type : (A : Type ℓ) → UARel A ℓ
+UARel._≅_ (𝒮-type A) = _≡_
+UARel.ua (𝒮-type A) a a' = idEquiv (a ≡ a')
