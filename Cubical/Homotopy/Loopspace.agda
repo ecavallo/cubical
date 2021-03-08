@@ -38,10 +38,34 @@ isComm∙ : ∀ {ℓ} (A : Pointed ℓ) → Type ℓ
 isComm∙ A = (p q : typ (Ω A)) → p ∙ q ≡ q ∙ p
 
 Eckmann-Hilton : ∀ {ℓ} {A : Pointed ℓ} (n : ℕ) → isComm∙ ((Ω^ (suc n)) A)
-Eckmann-Hilton n α β =
-  transport (λ i → cong (λ x → rUnit x (~ i)) α ∙ cong (λ x → lUnit x (~ i)) β
-                 ≡ cong (λ x → lUnit x (~ i)) β ∙ cong (λ x → rUnit x (~ i)) α)
-             λ i → (λ j → α (j ∧ ~ i) ∙ β (j ∧ i)) ∙ λ j → α (~ i ∨ j) ∙ β (i ∨ j)
+Eckmann-Hilton n α β l =
+  (λ i j → top l i j) ∙ (λ m j → side l m j)
+  where
+  a₀ = α i0 i0
+
+  top : (l i j : I) → _
+  top l i j =
+    hcomp
+      (λ k → λ
+        { (i = i0) → a₀
+        ; (j = i0) → a₀
+        ; (j = i1) → β (i ∧ l) k
+        ; (l = i0) → α i j
+        ; (l = i1) → β i (j ∧ k)
+        })
+      (α (i ∧ ~ l) j)
+
+  side : (l m j : I) → _
+  side l m j =
+    hcomp
+      (λ k → λ
+        { (m = i1) → a₀
+        ; (j = i0) → a₀
+        ; (j = i1) → β (m ∨ l) k
+        ; (l = i0) → β m (j ∧ k)
+        ; (l = i1) → α m j
+        })
+      (α (m ∨ ~ l) j)
 
 isCommA→isCommTrunc : ∀ {ℓ} {A : Pointed ℓ} (n : ℕ) → isComm∙ A
                     → isOfHLevel (suc n) (typ A)
